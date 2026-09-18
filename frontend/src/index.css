@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   CollabSphere design tokens
+   Dark is the product's home surface; light is a faithful mirror.
+------------------------------------------------------------------- */
+:root,
+:root[data-theme='dark'] {
+  --c-base: #0b0e14;
+  --c-surface: #12161f;
+  --c-raised: #171d29;
+  --c-line: #222a39;
+  --c-line-strong: #2e3849;
+  --c-ink: #e7eaf2;
+  --c-muted: #99a3b8;
+  --c-faint: #6b7589;
+  --c-accent: #6e8bff;
+  --c-accent-soft: rgba(110, 139, 255, 0.16);
+  --c-violet: #a177ff;
+  --c-ai: #ffb86b;
+  --c-ok: #4ade80;
+  --c-warn: #fbbf24;
+  --c-danger: #ff6b6b;
+  --c-glass: rgba(18, 22, 31, 0.72);
+  --c-grid: rgba(255, 255, 255, 0.035);
+  --shadow-color: 8 10 16;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --c-base: #f6f7fb;
+  --c-surface: #ffffff;
+  --c-raised: #ffffff;
+  --c-line: #e4e7ef;
+  --c-line-strong: #ced4e2;
+  --c-ink: #10141c;
+  --c-muted: #5e6779;
+  --c-faint: #8b93a5;
+  --c-accent: #4763e4;
+  --c-accent-soft: rgba(71, 99, 228, 0.1);
+  --c-violet: #7c4fe0;
+  --c-ai: #c2710c;
+  --c-ok: #16a34a;
+  --c-warn: #b45309;
+  --c-danger: #dc2626;
+  --c-glass: rgba(255, 255, 255, 0.78);
+  --c-grid: rgba(16, 20, 28, 0.045);
+  --shadow-color: 120 130 160;
+  color-scheme: light;
+}
+
+* { border-color: var(--c-line); }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-base);
+  color: var(--c-ink);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--c-accent-soft); color: var(--c-ink); }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Scrollbars: present but quiet. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--c-line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--c-faint); background-clip: content-box; }
+
+@layer components {
+  .cs-surface {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: 14px;
+  }
+  .cs-glass {
+    background: var(--c-glass);
+    backdrop-filter: saturate(150%) blur(14px);
+    -webkit-backdrop-filter: saturate(150%) blur(14px);
+  }
+  /* The faint blueprint grid used behind hero and empty canvases. */
+  .cs-grid {
+    background-image:
+      linear-gradient(var(--c-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .cs-hairline-ai {
+    background-image: linear-gradient(90deg, var(--c-ai), var(--c-violet));
+  }
+  .cs-link {
+    color: var(--c-muted);
+    transition: color .15s ease;
+  }
+  .cs-link:hover { color: var(--c-ink); }
+  .cs-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--c-raised);
+  }
+  .cs-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.055), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+}
+
+/* Markdown rendering (used by notes, README, AI answers). */
+.cs-md { line-height: 1.7; color: var(--c-ink); font-size: 15px; }
+.cs-md > *:first-child { margin-top: 0; }
+.cs-md h1, .cs-md h2, .cs-md h3 {
+  font-family: 'Space Grotesk', Inter, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 1.6em 0 .6em;
+  line-height: 1.25;
+}
+.cs-md h1 { font-size: 1.7rem; }
+.cs-md h2 { font-size: 1.3rem; padding-bottom: .35em; border-bottom: 1px solid var(--c-line); }
+.cs-md h3 { font-size: 1.07rem; }
+.cs-md p, .cs-md ul, .cs-md ol, .cs-md blockquote, .cs-md table { margin: 0 0 1em; }
+.cs-md ul, .cs-md ol { padding-left: 1.3em; }
+.cs-md li { margin: .3em 0; }
+.cs-md li::marker { color: var(--c-faint); }
+.cs-md a { color: var(--c-accent); text-decoration: none; border-bottom: 1px solid var(--c-accent-soft); }
+.cs-md a:hover { border-bottom-color: var(--c-accent); }
+.cs-md code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: .86em;
+  background: var(--c-accent-soft);
+  color: var(--c-ink);
+  padding: .15em .4em;
+  border-radius: 5px;
+}
+.cs-md pre {
+  background: var(--c-base);
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 1.1em;
+}
+.cs-md pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; }
+.cs-md blockquote {
+  border-left: 2px solid var(--c-accent);
+  padding: .1em 0 .1em 1em;
+  color: var(--c-muted);
+}
+.cs-md table { width: 100%; border-collapse: collapse; font-size: 14px; display: block; overflow-x: auto; }
+.cs-md th, .cs-md td { border: 1px solid var(--c-line); padding: 8px 12px; text-align: left; }
+.cs-md th { background: var(--c-raised); font-weight: 600; }
+.cs-md hr { border: 0; border-top: 1px solid var(--c-line); margin: 2em 0; }
+.cs-md img { max-width: 100%; border-radius: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

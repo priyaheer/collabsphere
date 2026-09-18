@@ -1,0 +1,24 @@
+{
+  "name": "collabsphere-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "CollabSphere — AI-powered developer collaboration platform (frontend only)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "info": {
+    "name": "CollabSphere API",
+    "description": "REST API for CollabSphere - AI-Powered Developer Collaboration Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "token", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "noteId", "value": "" },
+    { "key": "fileId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "notificationId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Health Check", "request": { "method": "GET", "url": "{{baseUrl}}/health" } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Priya\",\n  \"username\": \"priya\",\n  \"email\": \"priya@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.data && data.data.token) { pm.collectionVariables.set('token', data.data.token); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"priya@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        { "name": "Get Current User", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Create Project",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.data && data.data.project) { pm.collectionVariables.set('projectId', data.data.project._id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"CollabSphere\",\n  \"description\": \"A collaboration platform\",\n  \"technologies\": [\"react\", \"node\"],\n  \"visibility\": \"private\"\n}" }
+          }
+        },
+        { "name": "List Projects", "request": { "method": "GET", "url": "{{baseUrl}}/projects?search=react&page=1&limit=10" } },
+        { "name": "Get Project", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/projects/{{projectId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated description\"\n}" }
+          }
+        },
+        { "name": "Delete Project", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } }
+      ]
+    },
+    {
+      "name": "Members",
+      "item": [
+        { "name": "List Members", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/members" } },
+        { "name": "Search Users", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/members/search?q=priya" } },
+        {
+          "name": "Add Member",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects/{{projectId}}/members",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"otherdev\",\n  \"role\": \"member\"\n}" }
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/projects/{{projectId}}/members/{{userId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"admin\"\n}" }
+          }
+        },
+        { "name": "Remove Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}/members/{{userId}}" } }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "Create Note",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.data && data.data.note) { pm.collectionVariables.set('noteId', data.data.note._id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects/{{projectId}}/notes",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Architecture notes\",\n  \"content\": \"# Overview\\nThis is **markdown**.\"\n}" }
+          }
+        },
+        { "name": "List Project Notes", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/notes?page=1&limit=10" } },
+        { "name": "Get Note", "request": { "method": "GET", "url": "{{baseUrl}}/notes/{{noteId}}" } },
+        {
+          "name": "Update Note",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/notes/{{noteId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"# Updated\\nContent changed.\"\n}" }
+          }
+        },
+        { "name": "Delete Note", "request": { "method": "DELETE", "url": "{{baseUrl}}/notes/{{noteId}}" } }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload File",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.data && data.data.file) { pm.collectionVariables.set('fileId', data.data.file._id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects/{{projectId}}/files",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+          }
+        },
+        { "name": "List Project Files", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/files" } },
+        { "name": "Get File Metadata/Preview", "request": { "method": "GET", "url": "{{baseUrl}}/files/{{fileId}}" } },
+        { "name": "Get File Raw", "request": { "method": "GET", "url": "{{baseUrl}}/files/{{fileId}}/raw" } },
+        { "name": "Delete File", "request": { "method": "DELETE", "url": "{{baseUrl}}/files/{{fileId}}" } }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        { "name": "Get Project Analytics", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/analytics" } }
+      ]
+    },
+    {
+      "name": "Gemini AI",
+      "item": [
+        {
+          "name": "Explain Code",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gemini/explain",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"function add(a, b) { return a + b; }\",\n  \"type\": \"code\"\n}" }
+          }
+        },
+        {
+          "name": "Explain Note",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gemini/explain",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"# Sprint notes\\nWe decided to use JWT auth.\",\n  \"type\": \"note\"\n}" }
+          }
+        },
+        {
+          "name": "Generate Docs",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gemini/docs",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"function add(a, b) { return a + b; }\",\n  \"language\": \"javascript\"\n}" }
+          }
+        },
+        {
+          "name": "Generate README",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gemini/readme",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"projectName\": \"CollabSphere\",\n  \"description\": \"AI-powered developer collaboration platform\",\n  \"technologies\": [\"React\", \"Node.js\", \"MongoDB\"],\n  \"features\": [\"Auth\", \"Notes\", \"File sharing\"],\n  \"installation\": \"npm install\",\n  \"usage\": \"npm run dev\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "List Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+        { "name": "Mark Notification Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/{{notificationId}}/read" } },
+        { "name": "Mark All Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/read-all" } },
+        { "name": "Delete Notification", "request": { "method": "DELETE", "url": "{{baseUrl}}/notifications/{{notificationId}}" } }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        { "name": "Get My Profile", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/users/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bio\": \"Full-stack developer\",\n  \"skills\": [\"react\", \"node\"]\n}" }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/users/me/password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword456\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        { "name": "Get Public Project", "request": { "method": "GET", "url": "{{baseUrl}}/public/projects/{{projectId}}" } }
+      ]
+    }
+  ]
+}

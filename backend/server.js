@@ -19,6 +19,7 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 
 validateEnv();
 
@@ -81,6 +82,7 @@ app.use("/api/gemini", geminiRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/search", searchRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

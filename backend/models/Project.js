@@ -20,6 +20,7 @@ const projectSchema = new mongoose.Schema(
     members: { type: [memberSchema], default: [] },
     technologies: { type: [String], default: [] },
     visibility: { type: String, enum: PROJECT_VISIBILITY, default: "private", index: true },
+    publicToken: { type: String, unique: true, sparse: true, select: false },
     readme: { type: String, default: "" },
   },
   {

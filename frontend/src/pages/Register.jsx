@@ -6,7 +6,6 @@ import { Field, Input, PasswordInput } from '../components/common/Input.jsx';
 import { Icon } from '../components/common/Icon.jsx';
 import { cn } from '../utils/cn.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useToast } from '../context/ToastContext.jsx';
 
 function strengthOf(password) {
   let score = 0;
@@ -25,7 +24,6 @@ export default function Register() {
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -49,9 +47,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
-      localStorage.setItem('collabsphere.pendingVerificationEmail', form.email.trim().toLowerCase());
-      toast.success('Account created', { description: 'Check Gmail for your verification link.' });
-      navigate('/verify-email', { state: { email: form.email.trim().toLowerCase() } });
+      navigate('/login', { replace: true });
     } catch (err) {
       const fieldError = err.details?.errors?.[0];
       if (fieldError?.field) setErrors({ [fieldError.field]: fieldError.message || err.message });

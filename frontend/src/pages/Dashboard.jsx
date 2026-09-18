@@ -10,7 +10,6 @@ import { Icon } from '../components/common/Icon.jsx';
 import { SkeletonCard } from '../components/common/Skeleton.jsx';
 import { EmptyState, ErrorState } from '../components/common/EmptyState.jsx';
 import { ProjectFormModal } from '../components/modals/ProjectFormModal.jsx';
-import { AIUsageCard } from '../components/ai/AIUsageCard.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -33,7 +32,6 @@ export default function Dashboard() {
   const summary = useAsync(() => analyticsAPI.summary(), []);
   const projects = useAsync(() => projectAPI.list({ sort: 'recent' }), []);
   const activity = useAsync(() => activityAPI.recent(7), []);
-  const usage = useAsync(() => geminiAPI.usage(), []);
 
   const recent = (projects.data || []).slice(0, 4);
 
@@ -158,8 +156,6 @@ export default function Dashboard() {
               ))}
             </div>
           </Card>
-
-          <AIUsageCard usage={usage.data} />
 
           <Card className="p-4">
             <h2 className="font-display text-[14px] font-semibold text-ink">Needs documentation</h2>

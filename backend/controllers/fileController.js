@@ -35,7 +35,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
     fileName: req.file.filename,
     path: storedPath,
     storage: storageName,
-    url: `/api/files/${req.file.filename}`, // placeholder, replaced with real id-based url below
+    url: `/api/files/${req.file.filename}`,
     mimeType: req.file.mimetype || mimeForExtension(ext),
     size: req.file.size,
     extension: ext,

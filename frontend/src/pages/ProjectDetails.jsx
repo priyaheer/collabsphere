@@ -26,7 +26,6 @@ import { UploadModal } from '../components/modals/UploadModal.jsx';
 import { FilePreviewModal } from '../components/modals/FilePreviewModal.jsx';
 import { AIResultModal } from '../components/ai/AIResultModal.jsx';
 import { useAsync } from '../hooks/useAsync.js';
-import { useUsers } from '../hooks/useUsers.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, timeAgo } from '../utils/format.js';
@@ -64,7 +63,6 @@ export default function ProjectDetails() {
   const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { byId } = useUsers();
 
   const project = useAsync(() => projectAPI.get(projectId), [projectId]);
   const notes = useAsync(() => notesAPI.list({ projectId }), [projectId]);
@@ -74,7 +72,7 @@ export default function ProjectDetails() {
   const stats = useAsync(() => analyticsAPI.overview({ range: '30d', projectId }), [projectId]);
 
   const data = project.data;
-  const owner = data ? data.owner || byId[data.ownerId] : null;
+  const owner = data?.owner;
   const memberUsers = (members.data || []).map((m) => m.user).filter(Boolean);
   const canManage = data && (data.ownerId === user?._id || members.data?.some((m) => m.userId === user?._id && m.role === 'Admin'));
   const readmeSource = data?.readme || '# README\n\nNo README has been saved for this project yet.';
@@ -99,9 +97,17 @@ export default function ProjectDetails() {
   };
 
   const copyLink = () => {
-    const url = `${window.location.origin}/public/project/${projectId}`;
+    if (!data?.publicToken) return;
+    const url = `${window.location.origin}/public/project/${data.publicToken}`;
     navigator.clipboard?.writeText(url);
-    toast.success('Link copied', { description: url });
+    toast.success('Public link copied');
+  };
+
+  const togglePublicSharing = async () => {
+    const nextVisibility = data.visibility === 'public' ? 'private' : 'public';
+    await projectAPI.update(projectId, { visibility: nextVisibility });
+    await project.refetch();
+    toast.success(nextVisibility === 'public' ? 'Public sharing enabled' : 'Public sharing disabled');
   };
 
   const preview = async (file) => {
@@ -199,9 +205,20 @@ export default function ProjectDetails() {
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button variant="secondary" icon="link" onClick={copyLink}>
-              Share
-            </Button>
+            {canManage && data.visibility === 'public' ? (
+              <>
+                <Button variant="secondary" icon="link" onClick={copyLink}>
+                  Copy public link
+                </Button>
+                <Button variant="ghost" icon="lock" onClick={togglePublicSharing}>
+                  Disable sharing
+                </Button>
+              </>
+            ) : canManage ? (
+              <Button variant="secondary" icon="globe" onClick={togglePublicSharing}>
+                Enable public sharing
+              </Button>
+            ) : null}
             <Button variant="secondary" icon="edit" onClick={() => setEditOpen(true)}>
               Edit
             </Button>
@@ -422,6 +439,28 @@ export default function ProjectDetails() {
             <StatCard label="Files" value={files.data?.length ?? 0} icon="files" loading={stats.loading} />
             <StatCard label="Assistant calls" value={stats.data?.totals.aiCalls} delta={stats.data?.deltas.aiCalls} icon="sparkles" loading={stats.loading} />
           </div>
+
+          <Card>
+            <CardHeader title="Member contributions" description="Notes and files created by each project member" />
+            <div className="divide-y divide-line">
+              {(stats.data?.contributions || []).map((contribution) => (
+                <div key={contribution.userId} className="flex items-center gap-3 px-5 py-3">
+                  <Avatar user={contribution.user} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13.5px] font-medium text-ink">{contribution.user?.name}</p>
+                    <p className="text-[12px] text-faint">{contribution.user?.email}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-right text-[12.5px] text-muted">
+                    <span><strong className="text-ink">{contribution.notes}</strong> notes</span>
+                    <span><strong className="text-ink">{contribution.files}</strong> files</span>
+                  </div>
+                </div>
+              ))}
+              {!stats.loading && !stats.data?.contributions?.length && (
+                <p className="px-5 py-8 text-center text-[13px] text-muted">No member contributions yet.</p>
+              )}
+            </div>
+          </Card>
 
           <ChartCard title="Activity over time" description="Last 30 days in this project" loading={stats.loading}>
             {stats.data && <AreaChart id="project-activity" data={stats.data.activity} labels={stats.data.labels} height={220} />}

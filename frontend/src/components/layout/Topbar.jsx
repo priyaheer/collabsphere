@@ -91,6 +91,7 @@ export function Topbar({ onOpenSearch, onOpenSidebar, onUnreadChange }) {
             items={notifications}
             onMarkAll={() => notificationAPI.markAllRead().then(setNotifications)}
             onRead={(id) => notificationAPI.markRead(id).then(setNotifications)}
+            onOpen={(notification) => navigate(`/projects/${notification.projectId}`)}
           />
         </Dropdown>
 

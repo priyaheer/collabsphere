@@ -51,6 +51,12 @@ export default function Files() {
     }
   }, [params, setParams]);
 
+  useEffect(() => {
+    const fileId = params.get('file');
+    if (!fileId) return;
+    fileAPI.get(fileId).then(setPreview).catch((error) => toast.error(error.message || 'Could not open file.'));
+  }, [params, toast]);
+
   const rows = files.data || [];
   const totalSize = rows.reduce((sum, f) => sum + f.size, 0);
   const filtersActive = Boolean(query || type !== 'all' || projectId);
@@ -58,8 +64,13 @@ export default function Files() {
   const explain = async (file) => {
     setPreview(null);
     setAi({ open: true, loading: true, result: null, title: `Explaining ${file.name}` });
-    const res = await geminiAPI.explainCode({ fileId: file._id });
-    setAi({ open: true, loading: false, result: res.content, title: `Explaining ${file.name}` });
+    try {
+      const res = await geminiAPI.explainCode({ fileId: file._id });
+      setAi({ open: true, loading: false, result: res.content, title: `Explaining ${file.name}` });
+    } catch (error) {
+      setAi({ open: false, loading: false, result: null, title: '' });
+      toast.error(error.message || 'Gemini could not explain this file.');
+    }
   };
 
   const previewFile = async (file) => {

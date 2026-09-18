@@ -4,15 +4,12 @@ import { AppLayout } from '../components/layout/AppLayout.jsx';
 import { Button, IconButton } from '../components/common/Button.jsx';
 import { Icon } from '../components/common/Icon.jsx';
 import { Card } from '../components/common/Card.jsx';
-import { Skeleton } from '../components/common/Skeleton.jsx';
 import { AIMessage, AIThinking } from '../components/ai/AIMessage.jsx';
 import { PromptSuggestions } from '../components/ai/PromptSuggestions.jsx';
 import { ContextSelector } from '../components/ai/ContextSelector.jsx';
-import { AIUsageCard } from '../components/ai/AIUsageCard.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { cn } from '../utils/cn.js';
-import { timeAgo } from '../utils/format.js';
 import { fileAPI, geminiAPI, notesAPI, projectAPI } from '../services/api.js';
 
 export default function AIAssistant() {
@@ -27,15 +24,9 @@ export default function AIAssistant() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef(null);
 
-  const usage = useAsync(() => geminiAPI.usage(), []);
   const projects = useAsync(() => projectAPI.list(), []);
   const notes = useAsync(() => notesAPI.list(), []);
   const files = useAsync(() => fileAPI.list(), []);
-  const history = useAsync(() => geminiAPI.conversations(), []);
-
-  useEffect(() => {
-    if (history.data) setConversations(history.data);
-  }, [history.data]);
 
   const contextOptions = useMemo(
     () => [
@@ -82,7 +73,6 @@ export default function AIAssistant() {
     try {
       const reply = await geminiAPI.chat({ prompt: text, context, history: messages });
       setMessages((m) => [...m, reply]);
-      usage.refetch();
     } finally {
       setThinking(false);
     }
@@ -116,13 +106,6 @@ export default function AIAssistant() {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
             <p className="px-2 py-1.5 text-[11.5px] text-faint">Recent</p>
-            {history.loading && (
-              <div className="space-y-2 px-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-11 w-full rounded-lg" />
-                ))}
-              </div>
-            )}
             {conversations.map((c) => (
               <button
                 key={c._id}
@@ -137,14 +120,9 @@ export default function AIAssistant() {
                 <span className="flex items-center gap-1.5 text-[11px] text-faint">
                   <Icon name={c.context?.type === 'file' ? 'file' : c.context?.type === 'note' ? 'note' : 'folder'} size={10} />
                   <span className="truncate">{c.context?.label}</span>
-                  <span>·</span>
-                  {timeAgo(c.updatedAt)}
                 </span>
               </button>
             ))}
-          </div>
-          <div className="border-t border-line p-3">
-            <AIUsageCard usage={usage.data} />
           </div>
         </aside>
 

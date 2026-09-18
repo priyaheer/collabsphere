@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout.jsx';
 import { PageHeader } from '../components/layout/PageHeader.jsx';
 import { Card } from '../components/common/Card.jsx';
-import { Button } from '../components/common/Button.jsx';
+import { Button, IconButton } from '../components/common/Button.jsx';
 import { Icon } from '../components/common/Icon.jsx';
 import { SegmentedControl } from '../components/common/SegmentedControl.jsx';
 import { Avatar } from '../components/common/Avatar.jsx';
@@ -103,7 +103,13 @@ export default function Notifications() {
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-[11.5px] text-faint">
                     <span>{timeAgo(n.at)}</span>
                     {n.projectId && (
-                      <Link to={`/projects/${n.projectId}`} className="flex items-center gap-1 transition-colors hover:text-ink">
+                      <Link
+                        to={`/projects/${n.projectId}`}
+                        onClick={() => {
+                          if (!n.read) notificationAPI.markRead(n._id).then(() => setData((current) => current.map((item) => item._id === n._id ? { ...item, read: true } : item)));
+                        }}
+                        className="flex items-center gap-1 transition-colors hover:text-ink"
+                      >
                         <Icon name="folder" size={11} />
                         Open project
                       </Link>
@@ -111,15 +117,27 @@ export default function Notifications() {
                   </div>
                 </div>
 
-                {!n.read && (
-                  <button
-                    type="button"
-                    onClick={async () => setData(await notificationAPI.markRead(n._id))}
-                    className="h-fit shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-[12px] text-muted transition-colors hover:text-ink"
-                  >
-                    Mark read
-                  </button>
-                )}
+                <div className="flex shrink-0 items-start gap-1.5">
+                  {!n.read && (
+                    <button
+                      type="button"
+                      onClick={async () => setData(await notificationAPI.markRead(n._id))}
+                      className="h-fit rounded-lg border border-line px-2.5 py-1.5 text-[12px] text-muted transition-colors hover:text-ink"
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  <IconButton
+                    icon="trash"
+                    label="Delete notification"
+                    size="sm"
+                    variant="danger"
+                    onClick={async () => {
+                      setData(await notificationAPI.remove(n._id));
+                      toast.success('Notification deleted');
+                    }}
+                  />
+                </div>
               </div>
             );
           })}

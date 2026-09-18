@@ -1,22 +1,20 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import {
-  forgotPassword,
   getMe,
+  forgotPassword,
   login,
   logout,
   register,
-  resendVerification,
   resetPassword,
-  verifyEmail,
+  verifyResetOtp,
 } from "../controllers/authController.js";
 import {
-  forgotPasswordValidator,
   loginValidator,
+  forgotPasswordValidator,
   registerValidator,
-  resendVerificationValidator,
   resetPasswordValidator,
-  verifyEmailValidator,
+  verifyResetOtpValidator,
 } from "../validators/authValidators.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -40,20 +38,19 @@ const loginLimiter = rateLimit({
   message: { success: false, message: "Too many login attempts. Please try again later.", errors: [] },
 });
 
-const emailActionLimiter = rateLimit({
+const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many email requests. Please try again later.", errors: [] },
+  message: { success: false, message: "Too many password reset attempts. Please try again later.", errors: [] },
 });
 
 router.post("/register", authLimiter, registerValidator, register);
 router.post("/login", loginLimiter, loginValidator, login);
-router.post("/verify-email", authLimiter, verifyEmailValidator, verifyEmail);
-router.post("/resend-verification", emailActionLimiter, resendVerificationValidator, resendVerification);
-router.post("/forgot-password", emailActionLimiter, forgotPasswordValidator, forgotPassword);
-router.post("/reset-password", authLimiter, resetPasswordValidator, resetPassword);
+router.post("/forgot-password", passwordResetLimiter, forgotPasswordValidator, forgotPassword);
+router.post("/verify-reset-otp", passwordResetLimiter, verifyResetOtpValidator, verifyResetOtp);
+router.post("/reset-password", passwordResetLimiter, resetPasswordValidator, resetPassword);
 router.get("/me", protect, getMe);
 router.post("/logout", protect, logout);
 

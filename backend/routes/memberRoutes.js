@@ -10,7 +10,7 @@ import {
 import { protect, optionalAuth } from "../middleware/authMiddleware.js";
 
 // Mounted at /api/projects/:projectId/members - projectId is available via the mount path.
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 router.get("/", optionalAuth, projectIdParamValidator, getMembers);
 router.get("/search", protect, searchUsersValidator, searchUsers);

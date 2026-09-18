@@ -5,7 +5,6 @@ import { Icon } from '../common/Icon.jsx';
 import { Avatar } from '../common/Avatar.jsx';
 import { Skeleton } from '../common/Skeleton.jsx';
 import { timeAgo } from '../../utils/format.js';
-import { useUsers } from '../../hooks/useUsers.js';
 
 const VERBS = {
   project_created: { icon: 'folder', text: 'created' },
@@ -18,8 +17,6 @@ const VERBS = {
 };
 
 export function ActivityFeed({ items = [], loading = false, className = '' }) {
-  const { byId } = useUsers();
-
   if (loading) {
     return (
       <div className={cn('space-y-4 p-5', className)}>
@@ -40,7 +37,7 @@ export function ActivityFeed({ items = [], loading = false, className = '' }) {
     <ul className={cn('relative px-5 py-4', className)}>
       <span className="absolute bottom-6 left-[34px] top-8 w-px bg-line" aria-hidden="true" />
       {items.map((item) => {
-        const actor = item.actor || byId[item.actorId];
+        const actor = item.actor;
         const verb = VERBS[item.type] || { icon: 'clock', text: 'touched' };
         return (
           <li key={item._id} className="relative flex gap-3 py-2.5">

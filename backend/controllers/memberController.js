@@ -68,7 +68,7 @@ export const addMember = asyncHandler(async (req, res) => {
     sender: req.user._id,
     project: project._id,
     type: "MEMBER_ADDED",
-    message: `${req.user.name} added you to the project "${project.name}"`,
+    message: `${req.user.name} added you to the project "${project.name}" as ${role}`,
   });
 
   await project.populate("members.user", PUBLIC_USER_FIELDS);

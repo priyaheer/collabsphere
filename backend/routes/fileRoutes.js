@@ -9,14 +9,14 @@ const projectIdValidator = withValidation(param("projectId").isMongoId().withMes
 const fileIdValidator = withValidation(param("id").isMongoId().withMessage("Invalid file id"));
 
 // Mounted at /api/projects/:projectId/files
-export const projectFilesRouter = express.Router();
+export const projectFilesRouter = express.Router({ mergeParams: true });
 projectFilesRouter.post("/", protect, projectIdValidator, upload.single("file"), uploadFile);
-projectFilesRouter.get("/", optionalAuth, projectIdValidator, getProjectFiles);
+projectFilesRouter.get("/", protect, projectIdValidator, getProjectFiles);
 
 // Mounted at /api/files
 export const fileRouter = express.Router();
-fileRouter.get("/:id", optionalAuth, fileIdValidator, getFile);
-fileRouter.get("/:id/raw", optionalAuth, fileIdValidator, getFileRaw);
+fileRouter.get("/:id", protect, fileIdValidator, getFile);
+fileRouter.get("/:id/raw", protect, fileIdValidator, getFileRaw);
 fileRouter.delete("/:id", protect, fileIdValidator, deleteFile);
 
 export default fileRouter;

@@ -7,9 +7,7 @@ import { Icon } from '../components/common/Icon.jsx';
 import { Field, Input, PasswordInput } from '../components/common/Input.jsx';
 import { Switch } from '../components/common/Switch.jsx';
 import { Badge } from '../components/common/Badge.jsx';
-import { ConfirmDialog } from '../components/common/ConfirmDialog.jsx';
 import { cn } from '../utils/cn.js';
-import { useAsync } from '../hooks/useAsync.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -44,8 +42,6 @@ export default function Settings() {
     aiResults: false,
     weeklyDigest: true,
   });
-  const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
-  const sessions = useAsync(() => authAPI.sessions(), []);
 
   const saveAccount = async () => {
     const updated = await userAPI.updateProfile(account);
@@ -134,33 +130,6 @@ export default function Settings() {
                 </div>
               </Card>
 
-              <Card>
-                <CardHeader
-                  title="Active sessions"
-                  description="Devices currently signed in to your account"
-                  action={
-                    <Button size="sm" variant="secondary" icon="logout" onClick={() => setConfirmLogoutAll(true)}>
-                      Log out everywhere
-                    </Button>
-                  }
-                />
-                {(sessions.data || []).map((s) => (
-                  <div key={s._id} className="flex items-center gap-3 border-b border-line px-5 py-3.5 last:border-0">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-faint">
-                      <Icon name="monitor" size={15} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 truncate text-[13.5px] text-ink">
-                        {s.device}
-                        {s.current && <Badge tone="ok">This device</Badge>}
-                      </p>
-                      <p className="truncate text-[12px] text-faint">
-                        {s.location} · {s.ip} · {timeAgo(s.at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </Card>
             </>
           )}
 
@@ -245,18 +214,6 @@ export default function Settings() {
         </div>
       </div>
 
-      <ConfirmDialog
-        open={confirmLogoutAll}
-        onClose={() => setConfirmLogoutAll(false)}
-        title="Log out of every other device?"
-        message="This device stays signed in. Everything else will need the password again."
-        confirmLabel="Log out everywhere"
-        onConfirm={async () => {
-          await authAPI.revokeSessions();
-          sessions.refetch();
-          toast.success('Other sessions ended');
-        }}
-      />
     </AppLayout>
   );
 }

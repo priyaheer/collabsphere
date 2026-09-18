@@ -30,6 +30,7 @@ export default function SearchPage() {
   const [category, setCategory] = useState('all');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [recent, setRecent] = useLocalStorage('collabsphere.recentSearches', []);
   const debounced = useDebounce(query, 250);
 
@@ -39,11 +40,14 @@ export default function SearchPage() {
       return;
     }
     setLoading(true);
+    setError('');
     searchAPI.query(debounced).then((res) => {
       setResults(res);
-      setLoading(false);
       setRecent((list) => [debounced, ...list.filter((l) => l !== debounced)].slice(0, 5));
-    });
+    }).catch((err) => {
+      setResults(null);
+      setError(err.message || 'Search is unavailable right now.');
+    }).finally(() => setLoading(false));
     params.set('q', debounced);
     setParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,6 +126,8 @@ export default function SearchPage() {
         </Card>
       )}
 
+      {!loading && error && <EmptyState icon="alert" title="Search failed" description={error} />}
+
       {!query && !loading && (
         <EmptyState
           icon="search"
@@ -179,7 +185,7 @@ export default function SearchPage() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] font-medium text-ink">{n.title}</span>
-                      <span className="block truncate text-[12.5px] text-muted">{markdownExcerpt(n.content, 90)}</span>
+                      <span className="block truncate text-[12.5px] text-muted">{n.project?.name || 'Project'} · {markdownExcerpt(n.content, 90)}</span>
                     </span>
                     <span className="hidden text-[11.5px] text-faint sm:block">{timeAgo(n.updatedAt)}</span>
                   </Link>
@@ -195,13 +201,14 @@ export default function SearchPage() {
                 {results.files.map((f) => (
                   <Link
                     key={f._id}
-                    to="/files"
+                    to={`/files?file=${f._id}`}
                     className="flex items-center gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-0 hover:bg-raised"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-faint">
                       <Icon name="file" size={16} />
                     </span>
                     <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{f.name}</span>
+                    <span className="hidden max-w-36 truncate text-[11.5px] text-faint sm:block">{f.project?.name || 'Project'}</span>
                     <span className="text-[11.5px] tabular-nums text-faint">{formatBytes(f.size)}</span>
                   </Link>
                 ))}

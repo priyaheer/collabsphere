@@ -61,34 +61,6 @@ export const AI_CAPABILITIES = [
   { label: 'Summarise a project', detail: 'What it does, who owns it, what changed this week.' },
 ];
 
-export const LANDING_STATS = [
-  { value: '12,400', label: 'Projects documented' },
-  { value: '68,000', label: 'Notes written' },
-  { value: '31 min', label: 'Median time saved per README' },
-  { value: '99.98%', label: 'Uptime over 90 days' },
-];
-
-export const TESTIMONIALS = [
-  {
-    quote:
-      'Our onboarding doc used to be a Google Doc nobody trusted. Now the project carries its own documentation, and the README is generated from what is actually in the repo.',
-    name: 'Ijeoma Nwosu',
-    role: 'Engineering manager, Fieldwire',
-  },
-  {
-    quote:
-      'The code explanation is the part I did not expect to use daily. I paste in a service I have never touched and get a map before I start reading.',
-    name: 'Ben Halvorsen',
-    role: 'Staff engineer, Northline',
-  },
-  {
-    quote:
-      'We publish four internal libraries as public project pages. One link, always current, no static site to rebuild.',
-    name: 'Mira Castellanos',
-    role: 'Platform lead, Aurio',
-  },
-];
-
 export const PLANS = [
   {
     name: 'Solo',

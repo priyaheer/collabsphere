@@ -351,36 +351,21 @@ export const authAPI = {
     return unwrap(await request('/auth/forgot-password', { method: 'POST', body: { email } }));
   },
 
-  async resetPassword({ token, password, confirm }) {
-    return unwrap(await request('/auth/reset-password', { method: 'POST', body: { token, password, confirm } }));
+  async verifyResetOtp({ email, otp }) {
+    return unwrap(await request('/auth/verify-reset-otp', { method: 'POST', body: { email, otp } }));
   },
 
-  async verifyEmail({ token }) {
-    return unwrap(await request('/auth/verify-email', { method: 'POST', body: { token } }));
-  },
-
-  async resendVerification({ email }) {
-    return unwrap(await request('/auth/resend-verification', { method: 'POST', body: { email } }));
+  async resetPassword({ email, password, confirm }) {
+    return unwrap(await request('/auth/reset-password', { method: 'POST', body: { email, password, confirm } }));
   },
 
   async changePassword({ current, next }) {
     return unwrap(await request('/users/me/password', { method: 'PUT', body: { currentPassword: current, newPassword: next } }));
   },
 
-  async sessions() {
-    return [];
-  },
-
-  async revokeSessions() {
-    return [];
-  },
 };
 
 export const userAPI = {
-  async list() {
-    return [];
-  },
-
   async get(id) {
     return normalizeUser(unwrapOne(await request(`/users/${id}`), 'user'));
   },
@@ -391,8 +376,8 @@ export const userAPI = {
 };
 
 export const projectAPI = {
-  async list({ q = '', search = '', sort = 'recent' } = {}) {
-    const params = new URLSearchParams({ limit: '100' });
+  async list({ q = '', search = '', sort = 'recent', scope = 'all' } = {}) {
+    const params = new URLSearchParams({ limit: '100', scope });
     const term = search || q;
     if (term) params.set('search', term);
     const rows = unwrapList(await request(`/projects?${params}`), 'projects').map(normalizeProject);
@@ -403,8 +388,8 @@ export const projectAPI = {
     return normalizeProject(unwrapOne(await request(`/projects/${id}`), 'project'));
   },
 
-  async getPublic(id) {
-    const data = unwrap(await request(`/public/projects/${id}`));
+  async getPublic(token) {
+    const data = unwrap(await request(`/public/projects/${token}`));
     const project = normalizeProject({
       ...data.project,
       _id: data.project?._id || data.project?.id || id,
@@ -633,22 +618,17 @@ export const activityAPI = {
 
 export const searchAPI = {
   async query(q) {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return { projects: [], notes: [], files: [], members: [] };
-    const [projects, notes, files] = await Promise.all([projectAPI.list({ q }), notesAPI.list({ q }), fileAPI.list({ q })]);
-    const members = projects
-      .flatMap((project) => project.members.map((member) => member.user).filter(Boolean))
-      .filter((user, index, rows) => rows.findIndex((row) => row._id === user._id) === index)
-      .filter((user) => user.name.toLowerCase().includes(needle) || user.username.toLowerCase().includes(needle));
-    return { projects: projects.slice(0, 5), notes: notes.slice(0, 5), files: files.slice(0, 5), members: members.slice(0, 5) };
+    const data = unwrap(await request(`/search?${new URLSearchParams({ q })}`));
+    return {
+      projects: asArray(data.projects).map(normalizeProject),
+      notes: asArray(data.notes).map((note) => normalizeNote(note)),
+      files: asArray(data.files).map((file) => normalizeFile(file)),
+      members: [],
+    };
   },
 };
 
 export const geminiAPI = {
-  async conversations() {
-    return [];
-  },
-
   async chat({ prompt, context }) {
     const result = unwrap(await request('/gemini/explain', {
       method: 'POST',
@@ -670,14 +650,14 @@ export const geminiAPI = {
   async explainNote({ noteId, content }) {
     let source = content;
     if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
-    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: source || '', type: 'note' } })).result;
+    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: source || '', type: 'note', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
     return { content: result };
   },
 
   async improveNote({ noteId, content }) {
     let source = content;
     if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
-    const result = unwrap(await request('/gemini/docs', { method: 'POST', body: { code: source || '', language: 'markdown' } })).result;
+    const result = unwrap(await request('/gemini/docs', { method: 'POST', body: { code: source || '', language: 'markdown', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
     return { content: result };
   },
 
@@ -700,9 +680,6 @@ export const geminiAPI = {
     return { content: data.readme || data.result || '' };
   },
 
-  async usage() {
-    return { used: 0, limit: null, resetsAt: 'tracked server-side', model: 'Gemini via Express', status: 'connected' };
-  },
 };
 
 export default {

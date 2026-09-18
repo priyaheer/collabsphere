@@ -28,7 +28,7 @@ export function isValidObjectId(id) {
 //   "member" | "admin" | "owner"
 export async function loadProjectWithAccess(projectId, user, minRole = "member") {
   if (!isValidObjectId(projectId)) throw ApiError.notFound("Project not found");
-  const project = await Project.findById(projectId);
+  const project = await Project.findById(projectId).select("+publicToken");
   if (!project) throw ApiError.notFound("Project not found");
 
   const role = getMemberRole(project, user?._id);

@@ -1,19 +1,26 @@
 import User from "../models/User.js";
+import crypto from "crypto";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError, sendSuccess, sendCreated } from "../utils/apiResponse.js";
 import { generateToken, tokenCookieOptions } from "../utils/generateToken.js";
-import { generateSecureToken, hashToken, isExpired, minutesFromNow } from "../utils/authTokens.js";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../services/emailService.js";
+import { sendPasswordResetOtpEmail } from "../services/emailService.js";
 
-const VERIFICATION_MINUTES = 20;
-const RESET_MINUTES = 30;
-const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
-const GENERIC_RESET_MESSAGE = "If an account exists for that email, a password reset link has been sent.";
+const PASSWORD_RESET_OTP_MINUTES = 10;
+const PASSWORD_RESET_OTP_ATTEMPTS = 5;
+const PASSWORD_RESET_RESEND_COOLDOWN_MS = 60 * 1000;
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
+}
+
+function hashOtp(otp) {
+  return crypto.createHash("sha256").update(otp).digest("hex");
+}
+
+function generateOtp() {
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 function baseUsername(name, email) {
@@ -33,21 +40,6 @@ async function generateUniqueUsername(name, email) {
   return candidate.slice(0, 30);
 }
 
-function assignVerificationChallenge(user) {
-  const token = generateSecureToken();
-  user.emailVerificationTokenHash = hashToken(token);
-  user.emailVerificationExpiresAt = minutesFromNow(VERIFICATION_MINUTES);
-  user.emailVerificationSentAt = new Date();
-  return { token };
-}
-
-function assignPasswordReset(user) {
-  const token = generateSecureToken();
-  user.passwordResetTokenHash = hashToken(token);
-  user.passwordResetExpiresAt = minutesFromNow(RESET_MINUTES);
-  return { token };
-}
-
 async function sendAuthToken(res, user) {
   const token = generateToken(user._id);
   res.cookie("token", token, tokenCookieOptions);
@@ -65,22 +57,10 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   const username = await generateUniqueUsername(name, normalizedEmail);
-  const user = new User({ name, username, email: normalizedEmail, password, emailVerified: false });
-  const challenge = assignVerificationChallenge(user);
+  const user = new User({ name, username, email: normalizedEmail, password });
   await user.save();
 
-  try {
-    await sendVerificationEmail(user, challenge);
-  } catch (err) {
-    await User.deleteOne({ _id: user._id }).catch(() => undefined);
-    throw err;
-  }
-
-  return sendCreated(res, "Account created. Check your Gmail inbox to verify your email.", {
-    user,
-    verificationRequired: true,
-    email: user.email,
-  });
+  return sendCreated(res, "Account created successfully", { user });
 });
 
 // POST /api/auth/login
@@ -104,88 +84,87 @@ export const login = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized("Invalid email or password");
   }
 
-  if (!user.emailVerified) {
-    throw ApiError.forbidden("Please verify your Gmail address before logging in.");
-  }
-
   user.loginFailedAttempts = 0;
   user.loginLockedUntil = undefined;
   await user.save({ validateBeforeSave: false });
   return sendAuthToken(res, user);
 });
 
-// POST /api/auth/verify-email
-export const verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.body;
-  const user = await User.findOne({ emailVerificationTokenHash: hashToken(token) }).select(
-    "+emailVerificationTokenHash"
-  );
-  if (!user || isExpired(user.emailVerificationExpiresAt)) {
-    throw ApiError.badRequest("Verification link is invalid or expired.");
-  }
-
-  user.emailVerified = true;
-  user.emailVerifiedAt = new Date();
-  user.emailVerificationTokenHash = undefined;
-  user.emailVerificationExpiresAt = undefined;
-  user.emailVerificationSentAt = undefined;
-  await user.save({ validateBeforeSave: false });
-
-  return sendSuccess(res, { message: "Email verified successfully", data: { user } });
-});
-
-// POST /api/auth/resend-verification
-export const resendVerification = asyncHandler(async (req, res) => {
-  const email = normalizeEmail(req.body.email);
-  const user = await User.findOne({ email }).select("+emailVerificationTokenHash");
-
-  if (!user || user.emailVerified) {
-    return sendSuccess(res, { message: "If this account needs verification, a new email has been sent." });
-  }
-
-  if (user.emailVerificationSentAt && Date.now() - user.emailVerificationSentAt.getTime() < RESEND_COOLDOWN_MS) {
-    throw ApiError.tooManyRequests("Please wait before requesting another verification email.");
-  }
-
-  const challenge = assignVerificationChallenge(user);
-  await user.save({ validateBeforeSave: false });
-  await sendVerificationEmail(user, challenge);
-
-  return sendSuccess(res, { message: "Verification email sent", data: { email: user.email } });
-});
-
 // POST /api/auth/forgot-password
 export const forgotPassword = asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
-  const user = await User.findOne({ email }).select("+passwordResetTokenHash");
+  const user = await User.findOne({ email }).select(
+    "+passwordResetOtpHash +passwordResetOtpAttempts +passwordResetOtpSentAt"
+  );
 
-  if (user && user.emailVerified) {
-    const reset = assignPasswordReset(user);
+  if (user) {
+    if (user.passwordResetOtpSentAt && Date.now() - user.passwordResetOtpSentAt.getTime() < PASSWORD_RESET_RESEND_COOLDOWN_MS) {
+      throw ApiError.tooManyRequests("Please wait before requesting another reset code.");
+    }
+
+    const otp = generateOtp();
+    user.passwordResetOtpHash = hashOtp(otp);
+    user.passwordResetOtpExpiresAt = new Date(Date.now() + PASSWORD_RESET_OTP_MINUTES * 60 * 1000);
+    user.passwordResetOtpAttempts = 0;
+    user.passwordResetOtpSentAt = new Date();
+    user.passwordResetVerifiedAt = undefined;
     await user.save({ validateBeforeSave: false });
-    await sendPasswordResetEmail(user, reset);
+    await sendPasswordResetOtpEmail(user, otp);
   }
 
-  return sendSuccess(res, { message: GENERIC_RESET_MESSAGE });
+  return sendSuccess(res, {
+    message: "If an account exists for that email, a password reset code has been sent.",
+  });
+});
+
+// POST /api/auth/verify-reset-otp
+export const verifyResetOtp = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  const user = await User.findOne({ email }).select(
+    "+passwordResetOtpHash +passwordResetOtpAttempts"
+  );
+
+  if (!user || !user.passwordResetOtpHash || !user.passwordResetOtpExpiresAt || user.passwordResetOtpExpiresAt < new Date()) {
+    throw ApiError.badRequest("That reset code is invalid or expired.");
+  }
+
+  if ((user.passwordResetOtpAttempts || 0) >= PASSWORD_RESET_OTP_ATTEMPTS) {
+    throw ApiError.tooManyRequests("Too many incorrect reset code attempts. Request a new code.");
+  }
+
+  if (hashOtp(req.body.otp) !== user.passwordResetOtpHash) {
+    user.passwordResetOtpAttempts = (user.passwordResetOtpAttempts || 0) + 1;
+    await user.save({ validateBeforeSave: false });
+    throw ApiError.badRequest("That reset code is incorrect.");
+  }
+
+  user.passwordResetOtpHash = undefined;
+  user.passwordResetOtpExpiresAt = undefined;
+  user.passwordResetOtpAttempts = 0;
+  user.passwordResetVerifiedAt = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  return sendSuccess(res, { message: "Reset code verified." });
 });
 
 // POST /api/auth/reset-password
 export const resetPassword = asyncHandler(async (req, res) => {
-  const { token, password } = req.body;
-  const user = await User.findOne({ passwordResetTokenHash: hashToken(token) }).select("+passwordResetTokenHash +password");
+  const email = normalizeEmail(req.body.email);
+  const user = await User.findOne({ email }).select("+passwordResetVerifiedAt");
+  const resetWindow = user?.passwordResetVerifiedAt && Date.now() - user.passwordResetVerifiedAt.getTime() < PASSWORD_RESET_OTP_MINUTES * 60 * 1000;
 
-  if (!user || isExpired(user.passwordResetExpiresAt)) {
-    throw ApiError.badRequest("Password reset link is invalid or expired.");
+  if (!user || !resetWindow) {
+    throw ApiError.badRequest("Verify the reset code before setting a new password.");
   }
 
-  user.password = password;
+  user.password = req.body.password;
   user.passwordChangedAt = new Date();
-  user.passwordResetTokenHash = undefined;
-  user.passwordResetExpiresAt = undefined;
+  user.passwordResetVerifiedAt = undefined;
   user.loginFailedAttempts = 0;
   user.loginLockedUntil = undefined;
   await user.save();
 
-  return sendSuccess(res, { message: "Password changed successfully" });
+  return sendSuccess(res, { message: "Password changed successfully." });
 });
 
 // GET /api/auth/me

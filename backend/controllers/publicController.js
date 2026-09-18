@@ -6,7 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError, sendSuccess } from "../utils/apiResponse.js";
 import { PUBLIC_USER_FIELDS } from "../models/User.js";
 
-// GET /api/public/projects/:id
+// GET /api/public/projects/:token
 // No authentication required. Only projects with visibility="public" are
 // accessible here, and only safe, non-sensitive fields are ever returned.
 //
@@ -15,9 +15,10 @@ import { PUBLIC_USER_FIELDS } from "../models/User.js";
 // (similar to an open-source repo). Adding per-note/per-file visibility would
 // be a reasonable future enhancement (see final delivery notes).
 export const getPublicProject = asyncHandler(async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) throw ApiError.notFound("Project not found");
+  const token = String(req.params.token || "");
+  if (!/^[a-f0-9]{48}$/.test(token)) throw ApiError.notFound("Project not found");
 
-  const project = await Project.findOne({ _id: req.params.id, visibility: "public" })
+  const project = await Project.findOne({ publicToken: token, visibility: "public" })
     .select("name description technologies owner readme members createdAt")
     .populate("owner", PUBLIC_USER_FIELDS)
     .populate("members.user", PUBLIC_USER_FIELDS);

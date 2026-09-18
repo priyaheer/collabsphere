@@ -27,6 +27,7 @@ export function SearchOverlay({ open, onClose }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [recent, setRecent] = useLocalStorage('collabsphere.recentSearches', []);
   const debounced = useDebounce(query, 220);
   const inputRef = useRef(null);
@@ -48,9 +49,16 @@ export function SearchOverlay({ open, onClose }) {
     }
     let active = true;
     setLoading(true);
+    setError('');
     searchAPI.query(debounced).then((res) => {
       if (active) {
         setResults(res);
+        setLoading(false);
+      }
+    }).catch((err) => {
+      if (active) {
+        setError(err.message || 'Search is unavailable right now.');
+        setResults(null);
         setLoading(false);
       }
     });
@@ -127,7 +135,11 @@ export function SearchOverlay({ open, onClose }) {
             </>
           )}
 
-          {query && results && total === 0 && !loading && (
+          {query && error && !loading && (
+            <div className="px-4 py-10 text-center text-[13px] text-danger">{error}</div>
+          )}
+
+          {query && results && total === 0 && !loading && !error && (
             <div className="px-4 py-10 text-center">
               <p className="text-[14px] font-medium text-ink">Nothing matches “{query}”</p>
               <p className="mt-1 text-[13px] text-muted">
@@ -152,7 +164,7 @@ export function SearchOverlay({ open, onClose }) {
                         : group.key === 'notes'
                         ? `/notes/${row._id}`
                         : group.key === 'files'
-                        ? '/files'
+                        ? `/files?file=${row._id}`
                         : '/team';
                     return (
                       <button

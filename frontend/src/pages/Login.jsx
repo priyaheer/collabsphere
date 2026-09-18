@@ -39,10 +39,6 @@ export default function Login() {
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
       navigate(location.state?.from || '/dashboard', { replace: true });
     } catch (err) {
-      if (err.status === 403 && /verify your gmail address/i.test(err.message || '')) {
-        navigate('/verify-email', { replace: true, state: { email: form.email.trim().toLowerCase() } });
-        return;
-      }
       setSubmitError(err.message || 'We could not sign you in.');
     } finally {
       setLoading(false);

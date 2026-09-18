@@ -32,23 +32,6 @@ export const loginValidator = withValidation(
   body("password").notEmpty().withMessage("Password is required")
 );
 
-export const verifyEmailValidator = withValidation(
-  body("token")
-    .trim()
-    .notEmpty().withMessage("Verification token is required")
-    .isLength({ min: 64, max: 64 }).withMessage("Verification token is invalid")
-    .isHexadecimal().withMessage("Verification token is invalid")
-);
-
-export const resendVerificationValidator = withValidation(
-  body("email")
-    .trim()
-    .notEmpty().withMessage("Email is required")
-    .isEmail().withMessage("Please provide a valid email")
-    .custom(isGmailAddress).withMessage(GMAIL_ONLY_MESSAGE)
-    .normalizeEmail()
-);
-
 export const forgotPasswordValidator = withValidation(
   body("email")
     .trim()
@@ -58,11 +41,16 @@ export const forgotPasswordValidator = withValidation(
     .normalizeEmail()
 );
 
+export const verifyResetOtpValidator = withValidation(
+  body("email").trim().isEmail().withMessage("Please provide a valid email").normalizeEmail(),
+  body("otp").trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage("Enter the 6-digit reset code")
+);
+
 export const resetPasswordValidator = withValidation(
-  body("token").trim().notEmpty().withMessage("Reset token is required"),
+  body("email").trim().isEmail().withMessage("Please provide a valid email").normalizeEmail(),
   strongEnoughPassword,
   body("confirm")
-    .optional()
     .custom((value, { req }) => value === req.body.password)
     .withMessage("The two passwords do not match")
 );
+

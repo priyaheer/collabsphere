@@ -28,5 +28,6 @@ export const updateProjectValidator = withValidation(
 export const listProjectsValidator = withValidation(
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
-  query("search").optional().isString().isLength({ max: 100 })
+  query("search").optional().isString().isLength({ max: 100 }),
+  query("scope").optional().isIn(["all", "mine", "shared"])
 );

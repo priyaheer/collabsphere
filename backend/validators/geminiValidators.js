@@ -5,12 +5,14 @@ const MAX_CONTENT_LENGTH = 20000;
 
 export const explainValidator = withValidation(
   body("content").isString().trim().notEmpty().withMessage("Content is required").isLength({ max: MAX_CONTENT_LENGTH }).withMessage("Content is too long"),
-  body("type").isIn(["code", "note"]).withMessage("Type must be 'code' or 'note'")
+  body("type").isIn(["code", "note"]).withMessage("Type must be 'code' or 'note'"),
+  body("noteId").optional().isMongoId().withMessage("Invalid note id")
 );
 
 export const docsValidator = withValidation(
   body("code").isString().trim().notEmpty().withMessage("Code is required").isLength({ max: MAX_CONTENT_LENGTH }).withMessage("Code is too long"),
-  body("language").optional({ nullable: true }).isString().isLength({ max: 40 })
+  body("language").optional({ nullable: true }).isString().isLength({ max: 40 }),
+  body("noteId").optional().isMongoId().withMessage("Invalid note id")
 );
 
 export const readmeValidator = withValidation(

@@ -37,7 +37,7 @@ export const createNote = asyncHandler(async (req, res) => {
 
   await notifyProjectMembers(project, {
     sender: req.user._id,
-    type: "NOTE_UPDATED",
+    type: "NOTE_CREATED",
     message: `${req.user.name} added a new note "${note.title}" to "${project.name}"`,
     excludeUserId: req.user._id,
   });

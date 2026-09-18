@@ -4,13 +4,13 @@ import { createNoteValidator, projectIdParamValidator, noteIdParamValidator, upd
 import { protect, optionalAuth } from "../middleware/authMiddleware.js";
 
 // Mounted at /api/projects/:projectId/notes
-export const projectNotesRouter = express.Router();
+export const projectNotesRouter = express.Router({ mergeParams: true });
 projectNotesRouter.post("/", protect, createNoteValidator, createNote);
-projectNotesRouter.get("/", optionalAuth, projectIdParamValidator, getProjectNotes);
+projectNotesRouter.get("/", protect, projectIdParamValidator, getProjectNotes);
 
 // Mounted at /api/notes
 export const noteRouter = express.Router();
-noteRouter.get("/:id", optionalAuth, noteIdParamValidator, getNote);
+noteRouter.get("/:id", protect, noteIdParamValidator, getNote);
 noteRouter.put("/:id", protect, updateNoteValidator, updateNote);
 noteRouter.delete("/:id", protect, noteIdParamValidator, deleteNote);
 

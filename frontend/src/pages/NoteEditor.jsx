@@ -89,11 +89,16 @@ export default function NoteEditor() {
   const runAI = async (kind) => {
     const title = kind === 'explain' ? 'What this note says' : 'Suggested improvements';
     setAi({ open: true, loading: true, result: null, title });
-    const res =
-      kind === 'explain'
-        ? await geminiAPI.explainNote({ noteId: noteId || 'draft' })
-        : await geminiAPI.improveNote({ noteId: noteId || 'draft' });
-    setAi({ open: true, loading: false, result: res.content, title });
+    try {
+      const res =
+        kind === 'explain'
+          ? await geminiAPI.explainNote({ noteId: noteId || 'draft', content: form.content })
+          : await geminiAPI.improveNote({ noteId: noteId || 'draft', content: form.content });
+      setAi({ open: true, loading: false, result: res.content, title });
+    } catch (error) {
+      setAi({ open: false, loading: false, result: null, title: '' });
+      toast.error(error.message || 'Gemini could not process this note.');
+    }
   };
 
   if (note.loading) {

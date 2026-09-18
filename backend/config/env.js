@@ -18,7 +18,6 @@ export const env = {
   GEMINI_API_KEY: (process.env.GEMINI_API_KEY || "").trim(),
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.0-flash",
   CLIENT_URL: (process.env.CLIENT_URL || "http://localhost:5173").trim(),
-  APP_URL: (process.env.APP_URL || process.env.CLIENT_URL || "http://localhost:5173").trim(),
   EMAIL_FROM: (process.env.EMAIL_FROM || "").trim(),
   SMTP_HOST: (process.env.SMTP_HOST || "").trim(),
   SMTP_PORT: Number(process.env.SMTP_PORT) || 587,
@@ -42,15 +41,4 @@ export function validateEnv() {
     console.warn("[env] GEMINI_API_KEY is not set - AI endpoints will respond with 503.");
   }
 
-  if (!env.isTest) {
-    const missingEmailSettings = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "EMAIL_FROM"].filter(
-      (key) => !env[key]
-    );
-    const hasPlaceholderPassword = /your-16-character-google-app-password/i.test(env.SMTP_PASS);
-    if (missingEmailSettings.length || hasPlaceholderPassword) {
-      console.warn(
-        `[env] Auth email SMTP is not ready. Set ${missingEmailSettings.join(", ") || "SMTP_PASS"} in backend/.env.`
-      );
-    }
-  }
 }

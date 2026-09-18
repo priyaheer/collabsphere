@@ -13,7 +13,7 @@ const TYPE_ICON = {
   mention: 'message',
 };
 
-export function NotificationsMenu({ items = [], onMarkAll, onRead, onClose }) {
+export function NotificationsMenu({ items = [], onMarkAll, onRead, onOpen, onClose }) {
   const unread = items.filter((n) => !n.read).length;
 
   return (
@@ -48,7 +48,10 @@ export function NotificationsMenu({ items = [], onMarkAll, onRead, onClose }) {
           <button
             key={n._id}
             type="button"
-            onClick={() => onRead?.(n._id)}
+            onClick={() => {
+              onRead?.(n._id);
+              if (n.projectId) onOpen?.(n);
+            }}
             className={cn(
               'flex w-full gap-3 border-b border-line px-4 py-3 text-left transition-colors last:border-0 hover:bg-raised',
               !n.read && 'bg-base'

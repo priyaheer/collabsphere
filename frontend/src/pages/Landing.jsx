@@ -10,9 +10,7 @@ import {
   FEATURES,
   FOOTER_LINKS,
   HOW_STEPS,
-  LANDING_STATS,
   PLANS,
-  TESTIMONIALS,
 } from '../data/landingContent.js';
 
 const NAV_LINKS = [
@@ -250,9 +248,6 @@ export default function Landing() {
               <Button to="/register" variant="primary" size="lg" icon="arrowRight">
                 Get started
               </Button>
-              <Button to="/public/project/p_002" variant="outline" size="lg" icon="play">
-                View demo
-              </Button>
             </div>
 
             <p className="mt-5 flex items-center gap-2 text-[12.5px] text-faint">
@@ -424,38 +419,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="border-b border-line py-14">
-        <div className="mx-auto grid max-w-[1200px] gap-8 px-5 sm:grid-cols-2 lg:grid-cols-4">
-          {LANDING_STATS.map((stat) => (
-            <div key={stat.label}>
-              <p className="font-display text-[32px] font-semibold tracking-[-0.03em] text-ink tabular-nums">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-[13px] text-muted">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="border-b border-line py-20 sm:py-24">
-        <div className="mx-auto max-w-[1200px] px-5">
-          <SectionHeading eyebrow="In use" title="What teams say after a month" />
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <figure key={t.name} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
-                <blockquote className="flex-1 text-[14px] leading-relaxed text-ink">{t.quote}</blockquote>
-                <figcaption className="mt-5 border-t border-line pt-4">
-                  <p className="text-[13.5px] font-medium text-ink">{t.name}</p>
-                  <p className="mt-0.5 text-[12.5px] text-muted">{t.role}</p>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Pricing */}
       <section id="pricing" className="border-b border-line py-20 sm:py-24">
         <div className="mx-auto max-w-[1200px] px-5">
@@ -578,7 +541,6 @@ export default function Landing() {
 
           <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[12.5px] text-faint">© {new Date().getFullYear()} CollabSphere.</p>
-            <p className="text-[12.5px] text-faint">Mock data throughout — no backend is connected.</p>
           </div>
         </div>
       </footer>

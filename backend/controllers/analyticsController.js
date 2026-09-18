@@ -10,7 +10,7 @@ import { PUBLIC_USER_FIELDS } from "../models/User.js";
 
 // GET /api/projects/:projectId/analytics
 export const getProjectAnalytics = asyncHandler(async (req, res) => {
-  const { project } = await loadProjectWithAccess(req.params.projectId, req.user, "public");
+  const { project } = await loadProjectWithAccess(req.params.projectId, req.user, "member");
   const projectId = project._id;
 
   const [
@@ -42,7 +42,9 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
   ]);
 
   // Merge per-member note/file counts into a single contributions array.
-  const contributionsMap = new Map();
+  const contributionsMap = new Map(
+    project.members.map((member) => [member.user.toString(), { user: member.user, notes: 0, files: 0 }])
+  );
   for (const row of notesByMember) {
     if (!row._id) continue;
     const key = row._id.toString();
@@ -56,7 +58,7 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
     contributionsMap.set(key, existing);
   }
   const memberIds = [...contributionsMap.keys()].map((id) => new mongoose.Types.ObjectId(id));
-  const users = await mongoose.model("User").find({ _id: { $in: memberIds } }).select(PUBLIC_USER_FIELDS);
+  const users = await mongoose.model("User").find({ _id: { $in: memberIds } }).select(`${PUBLIC_USER_FIELDS} email`);
   const usersById = new Map(users.map((u) => [u._id.toString(), u]));
   const memberContributions = [...contributionsMap.values()].map((c) => ({
     user: usersById.get(c.user.toString()) || c.user,

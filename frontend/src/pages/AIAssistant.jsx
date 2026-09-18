@@ -220,7 +220,7 @@ export default function AIAssistant() {
                 </Button>
               </div>
               <p className="mt-2 text-center text-[11.5px] text-faint">
-                Mock responses in this build. The model runs server-side once <span className="font-mono">/ai/chat</span> is connected.
+                Responses are generated server-side through the CollabSphere Gemini API.
               </p>
             </div>
           </div>

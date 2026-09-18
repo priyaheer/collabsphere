@@ -11,14 +11,26 @@ import { Icon } from '../components/common/Icon.jsx';
 import { SkeletonCard } from '../components/common/Skeleton.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
 import { useAsync } from '../hooks/useAsync.js';
-import { useUsers } from '../hooks/useUsers.js';
 import { timeAgo, formatDate } from '../utils/format.js';
 import { projectAPI } from '../services/api.js';
 
 export default function Members() {
   const [query, setQuery] = useState('');
-  const { users } = useUsers();
   const projects = useAsync(() => projectAPI.list(), []);
+
+  const users = useMemo(() => {
+    const map = new Map();
+    (projects.data || []).forEach((project) => {
+      project.members.forEach((member) => {
+        if (!member.user?._id) return;
+        const existing = map.get(member.user._id) || { ...member.user, projectIds: [] };
+        existing.joinedAt = existing.joinedAt || member.joinedAt;
+        existing.projectIds.push(project._id);
+        map.set(member.user._id, existing);
+      });
+    });
+    return [...map.values()];
+  }, [projects.data]);
 
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -26,7 +38,7 @@ export default function Members() {
       .filter((u) => !needle || u.name.toLowerCase().includes(needle) || u.username.toLowerCase().includes(needle))
       .map((user) => ({
         user,
-        projects: (projects.data || []).filter((p) => p.members.some((m) => m.userId === user._id)),
+        projects: (projects.data || []).filter((p) => user.projectIds.includes(p._id)),
       }));
   }, [users, query, projects.data]);
 
@@ -46,7 +58,7 @@ export default function Members() {
         <Input icon="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people" />
       </div>
 
-      {!users.length && (
+      {projects.loading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
@@ -54,7 +66,7 @@ export default function Members() {
         </div>
       )}
 
-      {users.length > 0 && rows.length === 0 && (
+      {!projects.loading && users.length > 0 && rows.length === 0 && (
         <EmptyState
           icon="users"
           title="Nobody matches that"
@@ -82,10 +94,10 @@ export default function Members() {
               </div>
             </div>
 
-            <p className="mt-3.5 line-clamp-2 text-[13px] leading-relaxed text-muted">{user.bio}</p>
+            <p className="mt-3.5 line-clamp-2 text-[13px] leading-relaxed text-muted">{user.bio || 'Project collaborator'}</p>
 
             <div className="mt-3.5 flex flex-wrap gap-1.5">
-              {user.skills.slice(0, 3).map((skill) => (
+              {(user.skills || []).slice(0, 3).map((skill) => (
                 <span key={skill} className="rounded-md border border-line px-2 py-0.5 font-mono text-[11px] text-muted">
                   {skill}
                 </span>

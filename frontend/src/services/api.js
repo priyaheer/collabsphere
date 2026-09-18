@@ -1,45 +1,7 @@
-/**
- * ============================================================================
- *  CollabSphere API layer — the single seam between UI and backend
- * ============================================================================
- *
- *  No component talks to the network directly. Every screen calls one of the
- *  exported API objects below, so connecting the real Node + Express + MongoDB
- *  server later means editing this file only.
- *
- *  To go live:
- *    1. Set VITE_API_URL in .env            (e.g. http://localhost:5000/api)
- *    2. Set VITE_USE_MOCKS=false            (flips every method to `request()`)
- *    3. Delete the mock branch of any method once its endpoint exists.
- *
- *  Each method already shows the HTTP verb and path it expects, so the
- *  Express routes can be written straight from this file.
- */
-
-import {
-  USERS,
-  CURRENT_USER,
-  PROJECTS,
-  NOTES,
-  FILES,
-  ACTIVITIES,
-  NOTIFICATIONS,
-  ANALYTICS,
-  CONVERSATIONS,
-  SESSIONS,
-  SAMPLE_README,
-  AI_SAMPLES,
-} from '../data/mockData.js';
-
 const ENV = import.meta.env || {};
 
 export const API_BASE_URL = ENV.VITE_API_URL || 'http://localhost:5000/api';
-export const USE_MOCKS = ENV.VITE_USE_MOCKS !== 'false';
 export const TOKEN_KEY = 'collabsphere.token';
-
-/* -------------------------------------------------------------------------- */
-/*  Real HTTP client — already wired, simply unused while USE_MOCKS is true    */
-/* -------------------------------------------------------------------------- */
 
 export function getToken() {
   try {
@@ -54,7 +16,7 @@ export function setToken(token) {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch {
-    /* storage unavailable — session stays in memory */
+    /* localStorage can be unavailable in private/embedded contexts. */
   }
 }
 
@@ -68,462 +30,132 @@ export class ApiError extends Error {
 }
 
 export async function request(path, { method = 'GET', body, headers = {}, signal } = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    signal,
-    credentials: 'include',
-    headers: {
-      ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-      ...headers,
-    },
-    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      signal,
+      credentials: 'include',
+      headers: {
+        ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        ...headers,
+      },
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
+    throw new ApiError(
+      `Cannot reach the CollabSphere API at ${API_BASE_URL}. Make sure the backend server is running and VITE_API_URL is correct.`,
+      0,
+      { cause: err?.message }
+    );
+  }
 
   const payload = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(payload?.message || `Request failed (${res.status})`, res.status, payload);
+    const message = payload?.errors?.[0]?.message || payload?.message || `Request failed (${res.status})`;
+    throw new ApiError(message, res.status, payload);
   }
   return payload;
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Mock backend — an in-memory store so created/edited items survive a session */
-/* -------------------------------------------------------------------------- */
+const unwrap = (payload) => payload?.data ?? payload ?? {};
+const unwrapList = (payload, key) => unwrap(payload)[key] ?? [];
+const unwrapOne = (payload, key) => unwrap(payload)[key] ?? unwrap(payload);
+const asArray = (value) => (Array.isArray(value) ? value : []);
+const asId = (value) => (value && typeof value === 'object' ? value._id || value.id : value);
+const titleCase = (value = '') => String(value).slice(0, 1).toUpperCase() + String(value).slice(1);
+const toList = (value, separator = ',') =>
+  (Array.isArray(value) ? value : String(value || '').split(separator))
+    .map((item) => String(item).trim())
+    .filter(Boolean);
 
-const clone = (value) => JSON.parse(JSON.stringify(value));
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const latency = () => wait(320 + Math.random() * 380);
+function sortRows(rows, sort, dateKey = 'updatedAt') {
+  const copy = [...rows];
+  const sorters = {
+    recent: (a, b) => new Date(b[dateKey] || b.createdAt || 0) - new Date(a[dateKey] || a.createdAt || 0),
+    created: (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+    title: (a, b) => String(a.title || '').localeCompare(String(b.title || '')),
+    name: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
+    size: (a, b) => (b.size || 0) - (a.size || 0),
+    members: (a, b) => asArray(b.members).length - asArray(a.members).length,
+  };
+  return copy.sort(sorters[sort] || sorters.recent);
+}
 
-export const makeId = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+function normalizeUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    _id: user._id || user.id,
+    name: user.name || user.username || user.email || 'Unknown user',
+    username: user.username || String(user.email || '').split('@')[0] || 'user',
+  };
+}
 
-const mockDb = {
-  users: clone(USERS),
-  projects: clone(PROJECTS),
-  notes: clone(NOTES),
-  files: clone(FILES),
-  activities: clone(ACTIVITIES),
-  notifications: clone(NOTIFICATIONS),
-  conversations: clone(CONVERSATIONS),
-  sessions: clone(SESSIONS),
-  session: null,
-};
+function normalizeMember(member) {
+  const user = normalizeUser(member?.user);
+  const userId = asId(member?.user) || member?.userId;
+  const role = String(member?.role || 'member').toLowerCase();
+  return {
+    ...member,
+    user,
+    userId,
+    role: titleCase(role),
+    joinedAt: member?.joinedAt,
+  };
+}
 
-const logActivity = (type, projectId, target, actorId = CURRENT_USER._id) => {
-  mockDb.activities.unshift({
-    _id: makeId('a'),
-    type,
-    actorId,
-    projectId,
-    target,
-    at: new Date().toISOString(),
-  });
-};
+function detectAccent(id = '') {
+  const colors = ['#6e8bff', '#39c5bb', '#f472b6', '#a177ff', '#4ade80', '#ffb86b'];
+  return colors[String(id).split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % colors.length];
+}
 
-/* -------------------------------------------------------------------------- */
-/*  authAPI          →  POST /auth/*                                          */
-/* -------------------------------------------------------------------------- */
+function normalizeProject(project) {
+  if (!project) return null;
+  const members = asArray(project.members).map(normalizeMember);
+  const owner = normalizeUser(project.owner);
+  const ownerId = asId(project.owner) || project.ownerId || members.find((m) => m.role === 'Owner')?.userId;
+  const technologies = asArray(project.technologies || project.techStack);
 
-export const authAPI = {
-  /** POST /auth/login */
-  async login({ email, password }) {
-    if (!USE_MOCKS) return request('/auth/login', { method: 'POST', body: { email, password } });
-    await latency();
-    if (!email || !password) throw new ApiError('Enter your email and password.', 400);
-    if (password.length < 6) throw new ApiError('That password does not match our records.', 401);
-    const user = mockDb.users.find((u) => u.email === email) || clone(CURRENT_USER);
-    setToken('mock.jwt.token');
-    mockDb.session = user;
-    return { user, token: 'mock.jwt.token' };
-  },
+  return {
+    ...project,
+    _id: project._id || project.id,
+    updatedAt: project.updatedAt || project.createdAt,
+    owner,
+    ownerId,
+    members,
+    techStack: technologies,
+    technologies,
+    status: project.status || 'active',
+    progress: project.progress ?? 0,
+    starred: Boolean(project.starred),
+    accent: project.accent || detectAccent(project._id || project.id),
+    visibility: project.visibility || 'private',
+    readme: project.readme || '',
+    counts: {
+      notes: project.counts?.notes ?? 0,
+      files: project.counts?.files ?? 0,
+      members: members.length,
+      ...project.counts,
+    },
+  };
+}
 
-  /** POST /auth/register */
-  async register({ name, username, email }) {
-    if (!USE_MOCKS) return request('/auth/register', { method: 'POST', body: arguments[0] });
-    await latency();
-    if (mockDb.users.some((u) => u.username === username)) {
-      throw new ApiError('That username is taken.', 409, { field: 'username' });
-    }
-    const user = {
-      ...clone(CURRENT_USER),
-      _id: makeId('u'),
-      name,
-      username,
-      email,
-      joinedAt: new Date().toISOString(),
-    };
-    mockDb.users.push(user);
-    setToken('mock.jwt.token');
-    mockDb.session = user;
-    return { user, token: 'mock.jwt.token' };
-  },
-
-  /** GET /auth/me */
-  async me() {
-    if (!USE_MOCKS) return request('/auth/me');
-    await wait(180);
-    return mockDb.session || clone(CURRENT_USER);
-  },
-
-  /** POST /auth/logout */
-  async logout() {
-    if (!USE_MOCKS) return request('/auth/logout', { method: 'POST' });
-    await wait(150);
-    setToken(null);
-    mockDb.session = null;
-    return { ok: true };
-  },
-
-  /** POST /auth/forgot-password */
-  async forgotPassword({ email }) {
-    if (!USE_MOCKS) return request('/auth/forgot-password', { method: 'POST', body: { email } });
-    await latency();
-    return { ok: true, email };
-  },
-
-  /** POST /auth/reset-password */
-  async resetPassword({ token, password }) {
-    if (!USE_MOCKS) return request('/auth/reset-password', { method: 'POST', body: { token, password } });
-    await latency();
-    return { ok: true };
-  },
-
-  /** POST /auth/verify-email */
-  async verifyEmail({ code }) {
-    if (!USE_MOCKS) return request('/auth/verify-email', { method: 'POST', body: { code } });
-    await latency();
-    if (String(code).length !== 6) throw new ApiError('That code is not valid. Check the six digits and try again.', 400);
-    return { ok: true };
-  },
-
-  /** PATCH /auth/password */
-  async changePassword({ current, next }) {
-    if (!USE_MOCKS) return request('/auth/password', { method: 'PATCH', body: { current, next } });
-    await latency();
-    if (!current) throw new ApiError('Enter your current password.', 400);
-    return { ok: true };
-  },
-
-  /** GET /auth/sessions */
-  async sessions() {
-    if (!USE_MOCKS) return request('/auth/sessions');
-    await wait(240);
-    return clone(mockDb.sessions);
-  },
-
-  /** DELETE /auth/sessions */
-  async revokeSessions() {
-    if (!USE_MOCKS) return request('/auth/sessions', { method: 'DELETE' });
-    await latency();
-    mockDb.sessions = mockDb.sessions.filter((s) => s.current);
-    return clone(mockDb.sessions);
-  },
-};
-
-/* -------------------------------------------------------------------------- */
-/*  userAPI          →  /users/*                                              */
-/* -------------------------------------------------------------------------- */
-
-export const userAPI = {
-  /** GET /users */
-  async list(query = '') {
-    if (!USE_MOCKS) return request(`/users?q=${encodeURIComponent(query)}`);
-    await wait(220);
-    const q = query.trim().toLowerCase();
-    return clone(
-      mockDb.users.filter(
-        (u) => !q || u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q)
-      )
-    );
-  },
-
-  /** GET /users/:id */
-  async get(id) {
-    if (!USE_MOCKS) return request(`/users/${id}`);
-    await wait(200);
-    return clone(mockDb.users.find((u) => u._id === id) || CURRENT_USER);
-  },
-
-  /** PATCH /users/me */
-  async updateProfile(patch) {
-    if (!USE_MOCKS) return request('/users/me', { method: 'PATCH', body: patch });
-    await latency();
-    const me = mockDb.users.find((u) => u._id === CURRENT_USER._id);
-    Object.assign(me, patch);
-    mockDb.session = me;
-    return clone(me);
-  },
-};
-
-/* -------------------------------------------------------------------------- */
-/*  projectAPI       →  /projects/*                                           */
-/* -------------------------------------------------------------------------- */
-
-export const projectAPI = {
-  /** GET /projects?scope&q&status&sort */
-  async list({ scope = 'all', q = '', status = 'all', visibility = 'all', sort = 'recent' } = {}) {
-    if (!USE_MOCKS) {
-      const params = new URLSearchParams({ scope, q, status, visibility, sort });
-      return request(`/projects?${params}`);
-    }
-    await latency();
-    let rows = clone(mockDb.projects);
-    if (scope === 'mine') rows = rows.filter((p) => p.ownerId === CURRENT_USER._id);
-    if (scope === 'shared') rows = rows.filter((p) => p.ownerId !== CURRENT_USER._id);
-    if (scope === 'starred') rows = rows.filter((p) => p.starred);
-    if (status !== 'all') rows = rows.filter((p) => p.status === status);
-    if (visibility !== 'all') rows = rows.filter((p) => p.visibility === visibility);
-    if (q) {
-      const needle = q.toLowerCase();
-      rows = rows.filter(
-        (p) =>
-          p.name.toLowerCase().includes(needle) ||
-          p.description.toLowerCase().includes(needle) ||
-          p.techStack.some((t) => t.toLowerCase().includes(needle))
-      );
-    }
-    const sorters = {
-      recent: (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
-      name: (a, b) => a.name.localeCompare(b.name),
-      progress: (a, b) => b.progress - a.progress,
-      members: (a, b) => b.members.length - a.members.length,
-      created: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-    };
-    return rows.sort(sorters[sort] || sorters.recent);
-  },
-
-  /** GET /projects/:id */
-  async get(id) {
-    if (!USE_MOCKS) return request(`/projects/${id}`);
-    await wait(360);
-    const project = mockDb.projects.find((p) => p._id === id);
-    if (!project) throw new ApiError('That project does not exist, or you no longer have access.', 404);
-    return clone(project);
-  },
-
-  /** GET /public/projects/:id */
-  async getPublic(id) {
-    if (!USE_MOCKS) return request(`/public/projects/${id}`);
-    await wait(420);
-    const project = mockDb.projects.find((p) => p._id === id);
-    if (!project) throw new ApiError('No public project at this address.', 404);
-    return clone(project);
-  },
-
-  /** POST /projects */
-  async create(payload) {
-    if (!USE_MOCKS) return request('/projects', { method: 'POST', body: payload });
-    await latency();
-    const project = {
-      _id: makeId('p'),
-      slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      ownerId: CURRENT_USER._id,
-      members: [{ userId: CURRENT_USER._id, role: 'Owner', joinedAt: new Date().toISOString() }],
-      status: 'active',
-      progress: 0,
-      starred: false,
-      accent: '#6e8bff',
-      counts: { notes: 0, files: 0, members: 1 },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      techStack: [],
-      visibility: 'private',
-      ...payload,
-    };
-    mockDb.projects.unshift(project);
-    logActivity('project_created', project._id, project.name);
-    return clone(project);
-  },
-
-  /** PATCH /projects/:id */
-  async update(id, patch) {
-    if (!USE_MOCKS) return request(`/projects/${id}`, { method: 'PATCH', body: patch });
-    await latency();
-    const project = mockDb.projects.find((p) => p._id === id);
-    Object.assign(project, patch, { updatedAt: new Date().toISOString() });
-    return clone(project);
-  },
-
-  /** DELETE /projects/:id */
-  async remove(id) {
-    if (!USE_MOCKS) return request(`/projects/${id}`, { method: 'DELETE' });
-    await latency();
-    mockDb.projects = mockDb.projects.filter((p) => p._id !== id);
-    return { ok: true };
-  },
-
-  /** POST /projects/:id/star */
-  async toggleStar(id) {
-    if (!USE_MOCKS) return request(`/projects/${id}/star`, { method: 'POST' });
-    await wait(140);
-    const project = mockDb.projects.find((p) => p._id === id);
-    project.starred = !project.starred;
-    return clone(project);
-  },
-
-  /** GET /projects/:id/activity */
-  async activity(projectId) {
-    if (!USE_MOCKS) return request(`/projects/${projectId}/activity`);
-    await wait(280);
-    return clone(mockDb.activities.filter((a) => a.projectId === projectId));
-  },
-};
-
-/* -------------------------------------------------------------------------- */
-/*  notesAPI         →  /notes/*                                              */
-/* -------------------------------------------------------------------------- */
-
-export const notesAPI = {
-  /** GET /notes?projectId&q&tag&sort */
-  async list({ projectId, q = '', tag = 'all', sort = 'recent' } = {}) {
-    if (!USE_MOCKS) {
-      const params = new URLSearchParams({ projectId: projectId || '', q, tag, sort });
-      return request(`/notes?${params}`);
-    }
-    await latency();
-    let rows = clone(mockDb.notes);
-    if (projectId) rows = rows.filter((n) => n.projectId === projectId);
-    if (tag !== 'all') rows = rows.filter((n) => n.tags.includes(tag));
-    if (q) {
-      const needle = q.toLowerCase();
-      rows = rows.filter(
-        (n) => n.title.toLowerCase().includes(needle) || n.content.toLowerCase().includes(needle)
-      );
-    }
-    const sorters = {
-      recent: (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
-      title: (a, b) => a.title.localeCompare(b.title),
-      created: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-    };
-    return rows.sort(sorters[sort] || sorters.recent);
-  },
-
-  /** GET /notes/:id */
-  async get(id) {
-    if (!USE_MOCKS) return request(`/notes/${id}`);
-    await wait(300);
-    const note = mockDb.notes.find((n) => n._id === id);
-    if (!note) throw new ApiError('This note has been deleted or moved.', 404);
-    return clone(note);
-  },
-
-  /** POST /notes */
-  async create(payload) {
-    if (!USE_MOCKS) return request('/notes', { method: 'POST', body: payload });
-    await latency();
-    const note = {
-      _id: makeId('n'),
-      authorId: CURRENT_USER._id,
-      tags: [],
-      visibility: 'private',
-      content: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...payload,
-    };
-    mockDb.notes.unshift(note);
-    logActivity('note_created', note.projectId, note.title);
-    return clone(note);
-  },
-
-  /** PATCH /notes/:id */
-  async update(id, patch) {
-    if (!USE_MOCKS) return request(`/notes/${id}`, { method: 'PATCH', body: patch });
-    await wait(420);
-    const note = mockDb.notes.find((n) => n._id === id);
-    Object.assign(note, patch, { updatedAt: new Date().toISOString() });
-    logActivity('note_updated', note.projectId, note.title);
-    return clone(note);
-  },
-
-  /** DELETE /notes/:id */
-  async remove(id) {
-    if (!USE_MOCKS) return request(`/notes/${id}`, { method: 'DELETE' });
-    await latency();
-    mockDb.notes = mockDb.notes.filter((n) => n._id !== id);
-    return { ok: true };
-  },
-};
-
-/* -------------------------------------------------------------------------- */
-/*  fileAPI          →  /files/*   (uploads go out as multipart/form-data)    */
-/* -------------------------------------------------------------------------- */
-
-export const fileAPI = {
-  /** GET /files?projectId&q&type&sort */
-  async list({ projectId, q = '', type = 'all', sort = 'recent' } = {}) {
-    if (!USE_MOCKS) {
-      const params = new URLSearchParams({ projectId: projectId || '', q, type, sort });
-      return request(`/files?${params}`);
-    }
-    await latency();
-    let rows = clone(mockDb.files);
-    if (projectId) rows = rows.filter((f) => f.projectId === projectId);
-    if (type !== 'all') rows = rows.filter((f) => f.type === type);
-    if (q) rows = rows.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
-    const sorters = {
-      recent: (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt),
-      name: (a, b) => a.name.localeCompare(b.name),
-      size: (a, b) => b.size - a.size,
-    };
-    return rows.sort(sorters[sort] || sorters.recent);
-  },
-
-  /** GET /files/:id */
-  async get(id) {
-    if (!USE_MOCKS) return request(`/files/${id}`);
-    await wait(260);
-    return clone(mockDb.files.find((f) => f._id === id));
-  },
-
-  /**
-   * POST /files  (multipart)
-   * Real implementation:
-   *   const form = new FormData();
-   *   form.append('file', file); form.append('projectId', projectId);
-   *   return request('/files', { method: 'POST', body: form });
-   */
-  async upload({ file, projectId, onProgress }) {
-    if (!USE_MOCKS) {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('projectId', projectId);
-      return request('/files', { method: 'POST', body: form });
-    }
-    for (let p = 0; p <= 100; p += 20) {
-      onProgress?.(p);
-      await wait(120);
-    }
-    const record = {
-      _id: makeId('f'),
-      projectId,
-      name: file.name,
-      type: detectFileType(file.name),
-      size: file.size,
-      uploadedById: CURRENT_USER._id,
-      uploadedAt: new Date().toISOString(),
-      content: null,
-    };
-    mockDb.files.unshift(record);
-    logActivity('file_uploaded', projectId, record.name);
-    return clone(record);
-  },
-
-  /** DELETE /files/:id */
-  async remove(id) {
-    if (!USE_MOCKS) return request(`/files/${id}`, { method: 'DELETE' });
-    await latency();
-    mockDb.files = mockDb.files.filter((f) => f._id !== id);
-    return { ok: true };
-  },
-
-  /** GET /files/:id/download  →  responds with a signed URL in production */
-  async download(id) {
-    if (!USE_MOCKS) return request(`/files/${id}/download`);
-    await wait(200);
-    return { url: `#/mock-download/${id}` };
-  },
-};
+function normalizeNote(note) {
+  if (!note) return null;
+  const author = normalizeUser(note.author);
+  return {
+    ...note,
+    _id: note._id || note.id,
+    projectId: asId(note.project) || note.projectId,
+    author,
+    authorId: asId(note.author) || note.authorId,
+    tags: asArray(note.tags),
+    visibility: note.visibility || 'private',
+  };
+}
 
 export function detectFileType(filename = '') {
   const ext = filename.split('.').pop().toLowerCase();
@@ -538,314 +170,540 @@ export function detectFileType(filename = '') {
   return 'other';
 }
 
-/* -------------------------------------------------------------------------- */
-/*  memberAPI        →  /projects/:id/members/*                               */
-/* -------------------------------------------------------------------------- */
+function normalizeFile(file, preview) {
+  if (!file) return null;
+  const name = file.name || file.originalName || file.fileName || 'Untitled file';
+  const uploadedBy = normalizeUser(file.uploadedBy);
+  return {
+    ...file,
+    _id: file._id || file.id,
+    name,
+    projectId: asId(file.project) || file.projectId,
+    uploadedBy,
+    uploadedById: asId(file.uploadedBy) || file.uploadedById,
+    uploadedAt: file.uploadedAt || file.createdAt,
+    type: file.type || detectFileType(name),
+    content: preview?.kind === 'text' ? preview.content : file.content,
+    preview,
+    rawUrl: file.url ? `${API_BASE_URL.replace(/\/api$/, '')}${file.url}` : `${API_BASE_URL}/files/${file._id || file.id}/raw`,
+  };
+}
 
-export const memberAPI = {
-  /** GET /projects/:id/members */
-  async list(projectId) {
-    if (!USE_MOCKS) return request(`/projects/${projectId}/members`);
-    await wait(320);
-    const project = mockDb.projects.find((p) => p._id === projectId);
-    return clone(
-      project.members.map((m) => ({
-        ...m,
-        user: mockDb.users.find((u) => u._id === m.userId),
-      }))
-    );
+function normalizeActivity(item, project) {
+  if (!item) return null;
+  return {
+    ...item,
+    _id: item._id || item.id,
+    type: String(item.type || '').toLowerCase(),
+    actor: normalizeUser(item.user || item.actor),
+    actorId: asId(item.user || item.actor),
+    project: project || normalizeProject(item.project),
+    projectId: asId(item.project) || project?._id,
+    target: item.metadata?.noteId || item.metadata?.fileId || item.message,
+    at: item.createdAt || item.at,
+  };
+}
+
+function normalizeNotification(item) {
+  if (!item) return null;
+  const sender = normalizeUser(item.sender);
+  const project = normalizeProject(item.project);
+  return {
+    ...item,
+    _id: item._id || item.id,
+    type: String(item.type || '').toLowerCase(),
+    actor: sender,
+    actorId: sender?._id,
+    project,
+    projectId: project?._id || asId(item.project),
+    title: item.title || item.message,
+    body: item.body || item.message,
+    at: item.createdAt || item.at,
+  };
+}
+
+function projectPayload(form = {}) {
+  return {
+    name: form.name,
+    description: form.description || '',
+    technologies: asArray(form.techStack || form.technologies),
+    visibility: form.visibility || 'private',
+    readme: form.readme || '',
+  };
+}
+
+function notePayload(form = {}) {
+  return { title: form.title, content: form.content || '' };
+}
+
+function rolePayload(role = 'member') {
+  return String(role).toLowerCase();
+}
+
+async function listAllProjectRows(projectId, loader) {
+  if (projectId) return loader(projectId);
+  const projects = await projectAPI.list();
+  const lists = await Promise.all(projects.map((project) => loader(project._id).catch(() => [])));
+  return lists.flat();
+}
+
+function makeLabels(days) {
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - index - 1));
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  });
+}
+
+function emptySeries(days) {
+  return Array.from({ length: days }, () => 0);
+}
+
+function fileMix(files) {
+  const counts = files.reduce((acc, file) => {
+    acc[file.type] = (acc[file.type] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function analyticsFromProjects(projects, analytics, range, files) {
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+  const labels = makeLabels(days);
+  const activity = emptySeries(days);
+  const contributionMap = new Map();
+  const totals = { notes: 0, files: 0, activeMembers: 0, activityEvents: 0, aiCalls: 0 };
+
+  analytics.forEach(({ project, data }) => {
+    totals.notes += data.totalNotes || 0;
+    totals.files += data.totalFiles || 0;
+    totals.activityEvents += data.totalActivity || 0;
+    totals.activeMembers += data.totalMembers || 0;
+    asArray(data.activityOverTime).forEach((point) => {
+      const label = new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const index = labels.indexOf(label);
+      if (index >= 0) activity[index] += point.count || 0;
+    });
+    asArray(data.memberContributions).forEach((row) => {
+      const user = normalizeUser(row.user);
+      if (!user?._id) return;
+      const existing = contributionMap.get(user._id) || { userId: user._id, user, notes: 0, files: 0, activity: 0 };
+      existing.notes += row.notes || 0;
+      existing.files += row.files || 0;
+      existing.activity += (row.notes || 0) + (row.files || 0);
+      contributionMap.set(user._id, existing);
+    });
+    asArray(project.members).forEach((member) => {
+      const user = normalizeUser(member.user);
+      if (!user?._id || contributionMap.has(user._id)) return;
+      contributionMap.set(user._id, { userId: user._id, user, notes: 0, files: 0, activity: 0 });
+    });
+  });
+
+  const contributions = [...contributionMap.values()].map((row) => ({
+    ...row,
+    share: totals.activityEvents ? Math.round((row.activity / totals.activityEvents) * 100) : 0,
+  }));
+
+  return {
+    totals,
+    deltas: { notes: 0, files: 0, activeMembers: 0, activityEvents: 0, aiCalls: 0 },
+    labels,
+    activity,
+    notesCreated: emptySeries(days),
+    filesUploaded: emptySeries(days),
+    aiUsage: emptySeries(days),
+    weekLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    weekActivity: emptySeries(7),
+    fileMix: fileMix(files),
+    contributions,
+    projects,
+  };
+}
+
+export const authAPI = {
+  async login({ email, password }) {
+    const data = unwrap(await request('/auth/login', { method: 'POST', body: { email, password } }));
+    setToken(data.token);
+    return { user: normalizeUser(data.user), token: data.token };
   },
 
-  /** POST /projects/:id/members */
-  async add(projectId, { userId, role = 'Member' }) {
-    if (!USE_MOCKS) return request(`/projects/${projectId}/members`, { method: 'POST', body: { userId, role } });
-    await latency();
-    const project = mockDb.projects.find((p) => p._id === projectId);
-    if (project.members.some((m) => m.userId === userId)) {
-      throw new ApiError('They are already on this project.', 409);
+  async register(payload) {
+    const data = unwrap(await request('/auth/register', { method: 'POST', body: payload }));
+    setToken(null);
+    return { ...data, user: normalizeUser(data.user) };
+  },
+
+  async me() {
+    return normalizeUser(unwrapOne(await request('/auth/me'), 'user'));
+  },
+
+  async logout() {
+    try {
+      await request('/auth/logout', { method: 'POST' });
+    } finally {
+      setToken(null);
     }
-    project.members.push({ userId, role, joinedAt: new Date().toISOString() });
-    project.counts.members = project.members.length;
-    logActivity('member_joined', projectId, project.name, userId);
-    return clone(project.members);
+    return { ok: true };
   },
 
-  /** PATCH /projects/:id/members/:userId */
-  async updateRole(projectId, userId, role) {
-    if (!USE_MOCKS) return request(`/projects/${projectId}/members/${userId}`, { method: 'PATCH', body: { role } });
-    await wait(280);
-    const project = mockDb.projects.find((p) => p._id === projectId);
-    const m = project.members.find((x) => x.userId === userId);
-    m.role = role;
-    return clone(project.members);
+  async forgotPassword({ email }) {
+    return unwrap(await request('/auth/forgot-password', { method: 'POST', body: { email } }));
   },
 
-  /** DELETE /projects/:id/members/:userId */
-  async remove(projectId, userId) {
-    if (!USE_MOCKS) return request(`/projects/${projectId}/members/${userId}`, { method: 'DELETE' });
-    await latency();
-    const project = mockDb.projects.find((p) => p._id === projectId);
-    project.members = project.members.filter((m) => m.userId !== userId);
-    project.counts.members = project.members.length;
-    return clone(project.members);
+  async resetPassword({ token, password, confirm }) {
+    return unwrap(await request('/auth/reset-password', { method: 'POST', body: { token, password, confirm } }));
+  },
+
+  async verifyEmail({ token }) {
+    return unwrap(await request('/auth/verify-email', { method: 'POST', body: { token } }));
+  },
+
+  async resendVerification({ email }) {
+    return unwrap(await request('/auth/resend-verification', { method: 'POST', body: { email } }));
+  },
+
+  async changePassword({ current, next }) {
+    return unwrap(await request('/users/me/password', { method: 'PUT', body: { currentPassword: current, newPassword: next } }));
+  },
+
+  async sessions() {
+    return [];
+  },
+
+  async revokeSessions() {
+    return [];
   },
 };
 
-/* -------------------------------------------------------------------------- */
-/*  analyticsAPI     →  /analytics/*                                          */
-/* -------------------------------------------------------------------------- */
-
-export const analyticsAPI = {
-  /** GET /analytics?range=30d&projectId= */
-  async overview({ range = '30d', projectId } = {}) {
-    if (!USE_MOCKS) {
-      const params = new URLSearchParams({ range, projectId: projectId || '' });
-      return request(`/analytics?${params}`);
-    }
-    await wait(560);
-    const points = range === '7d' ? 7 : range === '90d' ? 30 : 30;
-    const data = clone(ANALYTICS);
-    if (range === '7d') {
-      data.labels = data.labels.slice(-7);
-      data.activity = data.activity.slice(-7);
-      data.notesCreated = data.notesCreated.slice(-7);
-      data.filesUploaded = data.filesUploaded.slice(-7);
-      data.aiUsage = data.aiUsage.slice(-7);
-    }
-    data.contributions = data.contributions.map((c) => ({
-      ...c,
-      user: mockDb.users.find((u) => u._id === c.userId),
-    }));
-    data.points = points;
-    return data;
+export const userAPI = {
+  async list() {
+    return [];
   },
 
-  /** GET /analytics/dashboard — the five stat cards on the dashboard */
-  async summary() {
-    if (!USE_MOCKS) return request('/analytics/dashboard');
-    await wait(300);
-    const mine = mockDb.projects;
+  async get(id) {
+    return normalizeUser(unwrapOne(await request(`/users/${id}`), 'user'));
+  },
+
+  async updateProfile(patch) {
+    return normalizeUser(unwrapOne(await request('/users/me', { method: 'PUT', body: patch }), 'user'));
+  },
+};
+
+export const projectAPI = {
+  async list({ q = '', search = '', sort = 'recent' } = {}) {
+    const params = new URLSearchParams({ limit: '100' });
+    const term = search || q;
+    if (term) params.set('search', term);
+    const rows = unwrapList(await request(`/projects?${params}`), 'projects').map(normalizeProject);
+    return sortRows(rows, sort);
+  },
+
+  async get(id) {
+    return normalizeProject(unwrapOne(await request(`/projects/${id}`), 'project'));
+  },
+
+  async getPublic(id) {
+    const data = unwrap(await request(`/public/projects/${id}`));
+    const project = normalizeProject({
+      ...data.project,
+      _id: data.project?._id || data.project?.id || id,
+      visibility: 'public',
+      members: asArray(data.contributors).map((user) => ({ user, role: 'member' })),
+    });
     return {
-      projects: { value: mine.length, delta: 8.3 },
-      active: { value: mine.filter((p) => p.status === 'active').length, delta: 4.1 },
-      members: { value: mockDb.users.length, delta: 16.7 },
-      files: { value: mockDb.files.length, delta: 9.2 },
-      notes: { value: mockDb.notes.length, delta: 12.4 },
+      ...project,
+      notes: asArray(data.notes).map((note) => normalizeNote({ ...note, project: project._id, visibility: 'public' })),
+      files: asArray(data.files).map((file) => normalizeFile({ ...file, project: project._id })),
+      contributors: asArray(data.contributors).map(normalizeUser),
+    };
+  },
+
+  async create(payload) {
+    return normalizeProject(unwrapOne(await request('/projects', { method: 'POST', body: projectPayload(payload) }), 'project'));
+  },
+
+  async update(id, patch) {
+    return normalizeProject(unwrapOne(await request(`/projects/${id}`, { method: 'PUT', body: projectPayload(patch) }), 'project'));
+  },
+
+  async remove(id) {
+    await request(`/projects/${id}`, { method: 'DELETE' });
+    return { ok: true };
+  },
+
+  async toggleStar(id) {
+    return this.get(id);
+  },
+
+  async activity(projectId) {
+    const data = unwrap(await request(`/projects/${projectId}/analytics`));
+    const project = await this.get(projectId).catch(() => null);
+    return asArray(data.recentActivity).map((item) => normalizeActivity(item, project));
+  },
+};
+
+export const notesAPI = {
+  async list({ projectId, q = '', tag = 'all', sort = 'recent' } = {}) {
+    const rows = await listAllProjectRows(projectId, async (id) => {
+      const params = new URLSearchParams({ limit: '100' });
+      if (q) params.set('search', q);
+      return unwrapList(await request(`/projects/${id}/notes?${params}`), 'notes').map(normalizeNote);
+    });
+    const filtered = tag === 'all' ? rows : rows.filter((note) => note.tags.includes(tag));
+    return sortRows(filtered, sort);
+  },
+
+  async get(id) {
+    return normalizeNote(unwrapOne(await request(`/notes/${id}`), 'note'));
+  },
+
+  async create(payload) {
+    const projectId = payload.projectId || asId(payload.project);
+    if (!projectId) throw new ApiError('Choose a project before saving the note.', 400);
+    return normalizeNote(unwrapOne(await request(`/projects/${projectId}/notes`, { method: 'POST', body: notePayload(payload) }), 'note'));
+  },
+
+  async update(id, patch) {
+    return normalizeNote(unwrapOne(await request(`/notes/${id}`, { method: 'PUT', body: notePayload(patch) }), 'note'));
+  },
+
+  async remove(id) {
+    await request(`/notes/${id}`, { method: 'DELETE' });
+    return { ok: true };
+  },
+};
+
+export const fileAPI = {
+  async list({ projectId, q = '', type = 'all', sort = 'recent' } = {}) {
+    const rows = await listAllProjectRows(projectId, async (id) => {
+      const params = new URLSearchParams({ limit: '100' });
+      if (q) params.set('search', q);
+      return unwrapList(await request(`/projects/${id}/files?${params}`), 'files').map((file) => normalizeFile(file));
+    });
+    const filtered = type === 'all' ? rows : rows.filter((file) => file.type === type);
+    return sortRows(filtered, sort, 'uploadedAt');
+  },
+
+  async get(id) {
+    const data = unwrap(await request(`/files/${id}`));
+    return normalizeFile(data.file, data.preview);
+  },
+
+  async upload({ file, projectId }) {
+    if (!projectId) throw new ApiError('Choose a project before uploading.', 400);
+    const form = new FormData();
+    form.append('file', file);
+    return normalizeFile(unwrapOne(await request(`/projects/${projectId}/files`, { method: 'POST', body: form }), 'file'));
+  },
+
+  async remove(id) {
+    await request(`/files/${id}`, { method: 'DELETE' });
+    return { ok: true };
+  },
+
+  async download(id) {
+    return { url: `${API_BASE_URL}/files/${id}/raw` };
+  },
+};
+
+export const memberAPI = {
+  async list(projectId) {
+    return unwrapList(await request(`/projects/${projectId}/members`), 'members').map(normalizeMember);
+  },
+
+  async search(projectId, q) {
+    if (!q?.trim()) return [];
+    return unwrapList(await request(`/projects/${projectId}/members/search?${new URLSearchParams({ q })}`), 'users').map(normalizeUser);
+  },
+
+  async add(projectId, { userId, username, email, role = 'member' }) {
+    const data = unwrap(await request(`/projects/${projectId}/members`, {
+      method: 'POST',
+      body: { userId, username, email, role: rolePayload(role) },
+    }));
+    return asArray(data.members).map(normalizeMember);
+  },
+
+  async updateRole(projectId, userId, role) {
+    const data = unwrap(await request(`/projects/${projectId}/members/${userId}`, {
+      method: 'PUT',
+      body: { role: rolePayload(role) },
+    }));
+    return asArray(data.members).map(normalizeMember);
+  },
+
+  async remove(projectId, userId) {
+    await request(`/projects/${projectId}/members/${userId}`, { method: 'DELETE' });
+    return { ok: true };
+  },
+};
+
+export const analyticsAPI = {
+  async overview({ range = '30d', projectId } = {}) {
+    if (projectId) {
+      const data = unwrap(await request(`/projects/${projectId}/analytics`));
+      const labels = makeLabels(30);
+      const activity = emptySeries(30);
+      asArray(data.activityOverTime).forEach((point) => {
+        const index = labels.indexOf(new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+        if (index >= 0) activity[index] = point.count || 0;
+      });
+      return {
+        totals: {
+          notes: data.totalNotes || 0,
+          files: data.totalFiles || 0,
+          activeMembers: data.totalMembers || 0,
+          activityEvents: data.totalActivity || 0,
+          aiCalls: 0,
+        },
+        deltas: { notes: 0, files: 0, activeMembers: 0, activityEvents: 0, aiCalls: 0 },
+        labels,
+        activity,
+        notesCreated: emptySeries(30),
+        filesUploaded: emptySeries(30),
+        aiUsage: emptySeries(30),
+        weekLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        weekActivity: emptySeries(7),
+        fileMix: [],
+        contributions: asArray(data.memberContributions).map((row) => ({
+          userId: asId(row.user),
+          user: normalizeUser(row.user),
+          notes: row.notes || 0,
+          files: row.files || 0,
+          activity: (row.notes || 0) + (row.files || 0),
+          share: 0,
+        })),
+        recentActivity: asArray(data.recentActivity).map(normalizeActivity),
+      };
+    }
+
+    const [projects, files] = await Promise.all([projectAPI.list(), fileAPI.list()]);
+    const analytics = await Promise.all(
+      projects.map((project) =>
+        request(`/projects/${project._id}/analytics`)
+          .then((payload) => ({ project, data: unwrap(payload) }))
+          .catch(() => ({ project, data: {} }))
+      )
+    );
+    return analyticsFromProjects(projects, analytics, range, files);
+  },
+
+  async summary() {
+    const [projects, notes, files] = await Promise.all([projectAPI.list(), notesAPI.list(), fileAPI.list()]);
+    const uniqueMembers = new Set(projects.flatMap((project) => project.members.map((member) => member.userId).filter(Boolean)));
+    return {
+      projects: { value: projects.length, delta: 0 },
+      active: { value: projects.filter((project) => project.status === 'active').length, delta: 0 },
+      members: { value: uniqueMembers.size, delta: 0 },
+      files: { value: files.length, delta: 0 },
+      notes: { value: notes.length, delta: 0 },
     };
   },
 };
 
-/* -------------------------------------------------------------------------- */
-/*  notificationAPI  →  /notifications/*                                      */
-/* -------------------------------------------------------------------------- */
-
 export const notificationAPI = {
-  /** GET /notifications */
   async list() {
-    if (!USE_MOCKS) return request('/notifications');
-    await wait(260);
-    return clone(mockDb.notifications);
+    return unwrapList(await request('/notifications?limit=100'), 'notifications').map(normalizeNotification);
   },
 
-  /** PATCH /notifications/:id/read */
   async markRead(id) {
-    if (!USE_MOCKS) return request(`/notifications/${id}/read`, { method: 'PATCH' });
-    await wait(120);
-    const item = mockDb.notifications.find((n) => n._id === id);
-    if (item) item.read = true;
-    return clone(mockDb.notifications);
+    await request(`/notifications/${id}/read`, { method: 'PATCH' });
+    return this.list();
   },
 
-  /** PATCH /notifications/read-all */
   async markAllRead() {
-    if (!USE_MOCKS) return request('/notifications/read-all', { method: 'PATCH' });
-    await wait(200);
-    mockDb.notifications = mockDb.notifications.map((n) => ({ ...n, read: true }));
-    return clone(mockDb.notifications);
+    await request('/notifications/read-all', { method: 'PATCH' });
+    return this.list();
+  },
+
+  async remove(id) {
+    await request(`/notifications/${id}`, { method: 'DELETE' });
+    return this.list();
   },
 };
 
-/* -------------------------------------------------------------------------- */
-/*  activityAPI + searchAPI                                                    */
-/* -------------------------------------------------------------------------- */
-
 export const activityAPI = {
-  /** GET /activity?limit= */
   async recent(limit = 8) {
-    if (!USE_MOCKS) return request(`/activity?limit=${limit}`);
-    await wait(280);
-    return clone(mockDb.activities.slice(0, limit)).map((a) => ({
-      ...a,
-      actor: mockDb.users.find((u) => u._id === a.actorId),
-      project: mockDb.projects.find((p) => p._id === a.projectId),
-    }));
+    const projects = await projectAPI.list();
+    const rows = await Promise.all(projects.map((project) => projectAPI.activity(project._id).catch(() => [])));
+    return rows.flat().sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0)).slice(0, limit);
   },
 };
 
 export const searchAPI = {
-  /** GET /search?q= — one endpoint, results grouped by kind */
   async query(q) {
-    if (!USE_MOCKS) return request(`/search?q=${encodeURIComponent(q)}`);
-    await wait(240);
     const needle = q.trim().toLowerCase();
     if (!needle) return { projects: [], notes: [], files: [], members: [] };
-    return {
-      projects: clone(mockDb.projects.filter((p) => p.name.toLowerCase().includes(needle))).slice(0, 5),
-      notes: clone(mockDb.notes.filter((n) => n.title.toLowerCase().includes(needle))).slice(0, 5),
-      files: clone(mockDb.files.filter((f) => f.name.toLowerCase().includes(needle))).slice(0, 5),
-      members: clone(
-        mockDb.users.filter(
-          (u) => u.name.toLowerCase().includes(needle) || u.username.toLowerCase().includes(needle)
-        )
-      ).slice(0, 5),
-    };
+    const [projects, notes, files] = await Promise.all([projectAPI.list({ q }), notesAPI.list({ q }), fileAPI.list({ q })]);
+    const members = projects
+      .flatMap((project) => project.members.map((member) => member.user).filter(Boolean))
+      .filter((user, index, rows) => rows.findIndex((row) => row._id === user._id) === index)
+      .filter((user) => user.name.toLowerCase().includes(needle) || user.username.toLowerCase().includes(needle));
+    return { projects: projects.slice(0, 5), notes: notes.slice(0, 5), files: files.slice(0, 5), members: members.slice(0, 5) };
   },
-};
-
-/* -------------------------------------------------------------------------- */
-/*  geminiAPI        →  /ai/*                                                 */
-/* -------------------------------------------------------------------------- */
-/*  The model is never called from the browser. These methods post to your     */
-/*  Express routes, which hold the API key and call the model server-side.     */
-/* -------------------------------------------------------------------------- */
-
-const pickSample = (prompt = '') => {
-  const p = prompt.toLowerCase();
-  if (p.includes('readme')) return SAMPLE_README;
-  if (p.includes('issue') || p.includes('bug') || p.includes('wrong')) return AI_SAMPLES.findIssues;
-  if (p.includes('improve') || p.includes('rewrite')) return AI_SAMPLES.improveNote;
-  if (p.includes('document')) return AI_SAMPLES.generateDocs;
-  if (p.includes('explain') && p.includes('note')) return AI_SAMPLES.explainNote;
-  if (p.includes('explain') || p.includes('code')) return AI_SAMPLES.explainCode;
-  return AI_SAMPLES.generic;
 };
 
 export const geminiAPI = {
-  /** GET /ai/conversations */
   async conversations() {
-    if (!USE_MOCKS) return request('/ai/conversations');
-    await wait(240);
-    return clone(mockDb.conversations);
+    return [];
   },
 
-  /** POST /ai/chat  { prompt, context, history } */
-  async chat({ prompt, context, history = [] }) {
-    if (!USE_MOCKS) return request('/ai/chat', { method: 'POST', body: { prompt, context, history } });
-    await wait(900 + Math.random() * 700);
-    return {
-      id: makeId('m'),
-      role: 'assistant',
-      at: new Date().toISOString(),
-      content: pickSample(prompt),
-      usage: { promptTokens: 420, completionTokens: 610 },
-    };
+  async chat({ prompt, context }) {
+    const result = unwrap(await request('/gemini/explain', {
+      method: 'POST',
+      body: { content: prompt, type: context?.type === 'file' ? 'code' : 'note' },
+    })).result;
+    return { id: `ai_${Date.now()}`, role: 'assistant', at: new Date().toISOString(), content: result };
   },
 
-  /** POST /ai/explain-code  { fileId, code } */
-  async explainCode({ fileId }) {
-    if (!USE_MOCKS) return request('/ai/explain-code', { method: 'POST', body: { fileId } });
-    await wait(1100);
-    return { content: AI_SAMPLES.explainCode };
+  async explainCode({ fileId, code }) {
+    let content = code;
+    if (!content && fileId) {
+      const file = await fileAPI.get(fileId);
+      content = file.content || `${file.name}\n${file.mimeType || ''}`;
+    }
+    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: content || '', type: 'code' } })).result;
+    return { content: result };
   },
 
-  /** POST /ai/explain-note  { noteId } */
-  async explainNote({ noteId }) {
-    if (!USE_MOCKS) return request('/ai/explain-note', { method: 'POST', body: { noteId } });
-    await wait(1000);
-    return { content: AI_SAMPLES.explainNote };
+  async explainNote({ noteId, content }) {
+    let source = content;
+    if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
+    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: source || '', type: 'note' } })).result;
+    return { content: result };
   },
 
-  /** POST /ai/improve-note  { noteId, content } */
-  async improveNote({ noteId }) {
-    if (!USE_MOCKS) return request('/ai/improve-note', { method: 'POST', body: { noteId } });
-    await wait(1200);
-    return { content: AI_SAMPLES.improveNote };
+  async improveNote({ noteId, content }) {
+    let source = content;
+    if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
+    const result = unwrap(await request('/gemini/docs', { method: 'POST', body: { code: source || '', language: 'markdown' } })).result;
+    return { content: result };
   },
 
-  /** POST /ai/generate-readme  { projectId, ...form } */
   async generateReadme(form) {
-    if (!USE_MOCKS) return request('/ai/generate-readme', { method: 'POST', body: form });
-    await wait(1600);
-    return { content: buildReadme(form) };
+    const technologies = toList(form.technologies || form.techStack)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const features = toList(form.features, '\n')
+      .map((item) => item.trim().replace(/^[-*]\s*/, ''))
+      .filter(Boolean);
+    const data = unwrap(await request('/gemini/readme', {
+      method: 'POST',
+      body: {
+        ...form,
+        projectName: form.projectName || form.name,
+        technologies,
+        features,
+      },
+    }));
+    return { content: data.readme || data.result || '' };
   },
 
-  /** GET /ai/usage */
   async usage() {
-    if (!USE_MOCKS) return request('/ai/usage');
-    await wait(200);
-    return { used: 312, limit: 1000, resetsAt: 'in 13 days', model: 'server-side model', status: 'operational' };
+    return { used: 0, limit: null, resetsAt: 'tracked server-side', model: 'Gemini via Express', status: 'connected' };
   },
 };
-
-/** Assembles a README from the generator form. Replaced by the model response later. */
-function buildReadme(form = {}) {
-  const {
-    name = 'Untitled project',
-    description = '',
-    techStack = [],
-    features = '',
-    installation = '',
-    usage = '',
-    envVars = '',
-    contributing = '',
-  } = form;
-
-  const list = (block) =>
-    String(block)
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((l) => `- ${l.replace(/^[-*]\s*/, '')}`)
-      .join('\n');
-
-  const fence = '```';
-  const stack = Array.isArray(techStack) ? techStack : String(techStack).split(',').map((s) => s.trim());
-
-  return [
-    `# ${name}`,
-    '',
-    description || 'A CollabSphere project.',
-    '',
-    stack.filter(Boolean).length ? `**Built with:** ${stack.filter(Boolean).join(' · ')}` : '',
-    '',
-    '## Features',
-    '',
-    features ? list(features) : '- Documented in project notes',
-    '',
-    '## Installation',
-    '',
-    `${fence}bash`,
-    installation || `git clone <repository-url>\ncd ${String(name).toLowerCase().replace(/\s+/g, '-')}\nnpm install`,
-    fence,
-    '',
-    '## Usage',
-    '',
-    `${fence}bash`,
-    usage || 'npm run dev',
-    fence,
-    '',
-    envVars ? '## Environment variables\n' : '',
-    envVars
-      ? `| Variable | Description |\n| --- | --- |\n${String(envVars)
-          .split('\n')
-          .filter(Boolean)
-          .map((line) => {
-            const [key, ...rest] = line.split('=');
-            return `| \`${key.trim()}\` | ${rest.join('=').trim() || 'Required'} |`;
-          })
-          .join('\n')}\n`
-      : '',
-    '## Contributing',
-    '',
-    contributing || 'Branch from `main`, keep commits scoped, and open a pull request with a short summary of the change.',
-    '',
-    '## License',
-    '',
-    'MIT',
-  ]
-    .filter((part) => part !== '')
-    .join('\n');
-}
 
 export default {
   authAPI,

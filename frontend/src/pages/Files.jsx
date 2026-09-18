@@ -62,6 +62,15 @@ export default function Files() {
     setAi({ open: true, loading: false, result: res.content, title: `Explaining ${file.name}` });
   };
 
+  const previewFile = async (file) => {
+    setPreview(await fileAPI.get(file._id));
+  };
+
+  const downloadFile = async (file) => {
+    const { url } = await fileAPI.download(file._id);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <AppLayout>
       <PageHeader
@@ -183,10 +192,10 @@ export default function Files() {
             <FileRow
               key={file._id}
               file={file}
-              onPreview={setPreview}
+              onPreview={previewFile}
               onDelete={setDeleting}
               onExplain={explain}
-              onDownload={() => toast.info('Download starts once storage is connected')}
+              onDownload={downloadFile}
             />
           ))}
       </Card>
@@ -213,7 +222,7 @@ export default function Files() {
         file={preview}
         onClose={() => setPreview(null)}
         onExplain={explain}
-        onDownload={() => toast.info('Download starts once storage is connected')}
+        onDownload={downloadFile}
       />
 
       <AIResultModal

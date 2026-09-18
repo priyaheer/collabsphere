@@ -1,46 +1,72 @@
-import React, { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../components/layout/AuthLayout.jsx';
-import { Button } from '../components/common/Button.jsx';
+import { Input } from '../components/common/Input.jsx';
 import { Icon } from '../components/common/Icon.jsx';
-import { cn } from '../utils/cn.js';
 import { authAPI } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 
 export default function VerifyEmail() {
-  const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
+  const [email, setEmail] = useState(
+    location.state?.email || localStorage.getItem('collabsphere.pendingVerificationEmail') || ''
+  );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const inputs = useRef([]);
+  const [cooldown, setCooldown] = useState(0);
   const toast = useToast();
   const navigate = useNavigate();
 
-  const setDigit = (index, value) => {
-    const clean = value.replace(/\D/g, '').slice(-1);
-    setDigits((d) => d.map((v, i) => (i === index ? clean : v)));
-    if (clean && index < 5) inputs.current[index + 1]?.focus();
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    const code = digits.join('');
-    setError('');
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
     setLoading(true);
+    authAPI
+      .verifyEmail({ token })
+      .then(() => {
+        if (cancelled) return;
+        localStorage.removeItem('collabsphere.pendingVerificationEmail');
+        toast.success('Email verified', { description: 'You can log in now.' });
+        navigate('/login', { replace: true });
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Verification failed.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, toast, token]);
+
+  useEffect(() => {
+    if (!cooldown) return undefined;
+    const timer = setTimeout(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  const resend = async () => {
+    setError('');
+    if (!email.trim()) {
+      setError('Enter the Gmail address you used to register.');
+      return;
+    }
     try {
-      await authAPI.verifyEmail({ code });
-      toast.success('Email verified');
-      navigate('/dashboard');
+      await authAPI.resendVerification({ email });
+      setCooldown(60);
+      toast.info('Verification email sent', { description: 'It can take a minute to arrive.' });
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Could not send a new verification email.');
     }
   };
 
   return (
     <AuthLayout
       title="Verify your email"
-      subtitle="We sent a six-digit code to your inbox. Enter it below to finish setting up."
+      subtitle="Open the verification link in your Gmail inbox to finish setting up."
       footer={
         <>
           Wrong address?{' '}
@@ -50,28 +76,19 @@ export default function VerifyEmail() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-5" noValidate>
-        <div className="flex gap-2">
-          {digits.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputs.current[i] = el;
-              }}
-              value={digit}
-              onChange={(e) => setDigit(i, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Backspace' && !digit && i > 0) inputs.current[i - 1]?.focus();
-              }}
-              inputMode="numeric"
-              aria-label={`Digit ${i + 1}`}
-              className={cn(
-                'h-14 flex-1 rounded-xl border bg-base text-center font-display text-[20px] text-ink transition-colors focus:border-accent focus:outline-none',
-                error ? 'border-danger' : 'border-line'
-              )}
-            />
-          ))}
-        </div>
+      <div className="space-y-5">
+        <label className="block text-[13px] font-medium text-ink" htmlFor="verify-email">
+          <span className="mb-1.5 block">Gmail</span>
+          <Input
+            id="verify-email"
+            type="email"
+            icon="mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@gmail.com"
+            disabled={Boolean(token)}
+          />
+        </label>
 
         {error && (
           <p className="flex items-center gap-1.5 text-[13px] text-danger">
@@ -80,22 +97,15 @@ export default function VerifyEmail() {
           </p>
         )}
 
-        <Button type="submit" variant="primary" size="lg" fullWidth isLoading={loading}>
-          Verify email
-        </Button>
-
         <button
           type="button"
-          onClick={() => toast.info('Code resent', { description: 'It can take a minute to arrive.' })}
+          onClick={resend}
+          disabled={cooldown > 0 || loading}
           className="w-full text-center text-[13px] text-muted transition-colors hover:text-ink"
         >
-          Resend the code
+          {cooldown > 0 ? `Resend available in ${cooldown}s` : 'Resend verification link'}
         </button>
-
-        <p className="rounded-lg border border-dashed border-line px-3 py-2.5 text-center text-[12px] text-faint">
-          Demo build: any six digits will pass.
-        </p>
-      </form>
+      </div>
     </AuthLayout>
   );
 }

@@ -577,7 +577,7 @@ export default function Landing() {
           </div>
 
           <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12.5px] text-faint">© {new Date().getFullYear()} CollabSphere. Frontend demo build.</p>
+            <p className="text-[12.5px] text-faint">© {new Date().getFullYear()} CollabSphere.</p>
             <p className="text-[12.5px] text-faint">Mock data throughout — no backend is connected.</p>
           </div>
         </div>

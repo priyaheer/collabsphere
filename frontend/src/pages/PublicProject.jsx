@@ -10,28 +10,25 @@ import { Skeleton } from '../components/common/Skeleton.jsx';
 import { ErrorState } from '../components/common/EmptyState.jsx';
 import { MarkdownPreview } from '../components/editor/MarkdownPreview.jsx';
 import { useAsync } from '../hooks/useAsync.js';
-import { useUsers } from '../hooks/useUsers.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { formatBytes, formatDate, timeAgo } from '../utils/format.js';
 import { markdownExcerpt } from '../utils/markdown.js';
-import { fileAPI, notesAPI, projectAPI } from '../services/api.js';
-import { SAMPLE_README } from '../data/mockData.js';
+import { projectAPI } from '../services/api.js';
 
 /** Read-only view served at /public/project/:projectId — no editing controls. */
 export default function PublicProject() {
   const { projectId } = useParams();
-  const { byId } = useUsers();
   const { theme, toggleTheme } = useTheme();
   const [copied, setCopied] = useState(false);
 
   const project = useAsync(() => projectAPI.getPublic(projectId), [projectId]);
-  const notes = useAsync(() => notesAPI.list({ projectId }), [projectId]);
-  const files = useAsync(() => fileAPI.list({ projectId }), [projectId]);
 
   const data = project.data;
-  const owner = data ? byId[data.ownerId] : null;
-  const contributors = (data?.members || []).map((m) => byId[m.userId]).filter(Boolean);
-  const publicNotes = (notes.data || []).filter((n) => n.visibility === 'public');
+  const owner = data?.owner;
+  const contributors = data?.contributors || [];
+  const publicNotes = data?.notes || [];
+  const publicFiles = data?.files || [];
+  const readmeSource = data?.readme || '# README\n\nNo README has been published for this project yet.';
 
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -140,7 +137,7 @@ export default function PublicProject() {
                   <span className="font-mono text-[12.5px] text-muted">README.md</span>
                 </div>
                 <div className="px-6 py-6">
-                  <MarkdownPreview source={SAMPLE_README} />
+                  <MarkdownPreview source={readmeSource} />
                 </div>
               </Card>
 
@@ -183,14 +180,14 @@ export default function PublicProject() {
               <div className="border-t border-line pt-5">
                 <h2 className="mb-2.5 font-display text-[14px] font-semibold text-ink">Public files</h2>
                 <div className="space-y-1.5">
-                  {(files.data || []).slice(0, 6).map((file) => (
+                  {publicFiles.slice(0, 6).map((file) => (
                     <div key={file._id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-raised">
                       <Icon name="file" size={13} className="shrink-0 text-faint" />
                       <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted">{file.name}</span>
                       <span className="text-[11px] tabular-nums text-faint">{formatBytes(file.size)}</span>
                     </div>
                   ))}
-                  {!files.loading && (files.data || []).length === 0 && (
+                  {publicFiles.length === 0 && (
                     <p className="text-[12.5px] text-faint">No files published yet.</p>
                   )}
                 </div>

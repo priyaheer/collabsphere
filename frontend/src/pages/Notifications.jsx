@@ -11,7 +11,6 @@ import { SkeletonRow } from '../components/common/Skeleton.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
 import { cn } from '../utils/cn.js';
 import { useAsync } from '../hooks/useAsync.js';
-import { useUsers } from '../hooks/useUsers.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { timeAgo } from '../utils/format.js';
 import { notificationAPI } from '../services/api.js';
@@ -27,7 +26,6 @@ const TYPE_ICON = {
 
 export default function Notifications() {
   const [filter, setFilter] = useState('all');
-  const { byId } = useUsers();
   const toast = useToast();
   const { data, loading, setData } = useAsync(() => notificationAPI.list(), []);
 
@@ -83,7 +81,7 @@ export default function Notifications() {
 
         {!loading &&
           rows.map((n) => {
-            const actor = byId[n.actorId];
+            const actor = n.actor;
             return (
               <div
                 key={n._id}

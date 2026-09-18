@@ -10,6 +10,7 @@ export function FilePreviewModal({ open, onClose, file, onExplain, onDownload })
   if (!file) return null;
   const meta = FILE_TYPE_META[file.type] || FILE_TYPE_META.other;
   const isCode = CODE_TYPES.includes(file.type) && file.content;
+  const isImage = file.preview?.kind === 'image' || file.type === 'image';
 
   return (
     <Modal
@@ -36,6 +37,10 @@ export function FilePreviewModal({ open, onClose, file, onExplain, onDownload })
     >
       {isCode ? (
         <CodeBlock code={file.content} filename={file.name} language={file.type} maxHeight={460} />
+      ) : isImage ? (
+        <div className="overflow-hidden rounded-xl border border-line bg-base">
+          <img src={file.rawUrl} alt={file.name} className="max-h-[520px] w-full object-contain" />
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line py-16 text-center cs-grid">
           <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-surface" style={{ color: meta.color }}>
@@ -43,7 +48,7 @@ export function FilePreviewModal({ open, onClose, file, onExplain, onDownload })
           </span>
           <p className="text-[14px] font-medium text-ink">No inline preview for {meta.label.toLowerCase()} files</p>
           <p className="mt-1 max-w-sm text-[13px] text-muted">
-            Download the file to open it locally. Rendering happens once the storage backend serves signed URLs.
+            Download the file to open it locally.
           </p>
         </div>
       )}

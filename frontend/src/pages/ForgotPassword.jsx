@@ -18,11 +18,17 @@ export default function ForgotPassword() {
       setError('That email address is not valid.');
       return;
     }
+    if (!email.trim().toLowerCase().endsWith('@gmail.com')) {
+      setError('Use a Gmail address ending in @gmail.com.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
       await authAPI.forgotPassword({ email });
       setSent(true);
+    } catch (err) {
+      setError(err.message || 'Password reset is not available yet.');
     } finally {
       setLoading(false);
     }
@@ -53,9 +59,6 @@ export default function ForgotPassword() {
             </button>
           </div>
         </div>
-        <Button to="/reset-password" variant="secondary" fullWidth className="mt-4">
-          Open the reset screen (demo)
-        </Button>
       </AuthLayout>
     );
   }
@@ -78,7 +81,7 @@ export default function ForgotPassword() {
             icon="mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="you@gmail.com"
             error={error}
             autoFocus
           />

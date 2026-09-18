@@ -14,6 +14,10 @@ async function resolveUser(token) {
   const decoded = verifyToken(token); // throws on invalid/expired -> handled by errorMiddleware (401)
   const user = await User.findById(decoded.id);
   if (!user) throw ApiError.unauthorized("User belonging to this token no longer exists");
+  if (!user.emailVerified) throw ApiError.forbidden("Please verify your Gmail address before continuing.");
+  if (user.passwordChangedAt && decoded.iat && user.passwordChangedAt.getTime() > decoded.iat * 1000) {
+    throw ApiError.unauthorized("Password was changed after this session started. Please log in again.");
+  }
   return user;
 }
 

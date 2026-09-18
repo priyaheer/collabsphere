@@ -38,7 +38,6 @@ import {
   notesAPI,
   projectAPI,
 } from '../services/api.js';
-import { SAMPLE_README } from '../data/mockData.js';
 
 const TABS = [
   { value: 'overview', label: 'Overview', icon: 'dashboard' },
@@ -75,9 +74,10 @@ export default function ProjectDetails() {
   const stats = useAsync(() => analyticsAPI.overview({ range: '30d', projectId }), [projectId]);
 
   const data = project.data;
-  const owner = data ? byId[data.ownerId] : null;
+  const owner = data ? data.owner || byId[data.ownerId] : null;
   const memberUsers = (members.data || []).map((m) => m.user).filter(Boolean);
   const canManage = data && (data.ownerId === user?._id || members.data?.some((m) => m.userId === user?._id && m.role === 'Admin'));
+  const readmeSource = data?.readme || '# README\n\nNo README has been saved for this project yet.';
 
   const changeTab = (value) => {
     setTab(value);
@@ -102,6 +102,15 @@ export default function ProjectDetails() {
     const url = `${window.location.origin}/public/project/${projectId}`;
     navigator.clipboard?.writeText(url);
     toast.success('Link copied', { description: url });
+  };
+
+  const preview = async (file) => {
+    setPreviewFile(await fileAPI.get(file._id));
+  };
+
+  const download = async (file) => {
+    const { url } = await fileAPI.download(file._id);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (project.loading) {
@@ -238,7 +247,7 @@ export default function ProjectDetails() {
                 }
               />
               <div className="max-h-72 overflow-hidden px-5 py-4">
-                <MarkdownPreview source={SAMPLE_README.split('\n').slice(0, 14).join('\n')} />
+                <MarkdownPreview source={readmeSource.split('\n').slice(0, 14).join('\n')} />
               </div>
             </Card>
 
@@ -361,9 +370,9 @@ export default function ProjectDetails() {
                 <FileRow
                   key={file._id}
                   file={file}
-                  onPreview={setPreviewFile}
+                  onPreview={preview}
                   onDelete={setDeletingFile}
-                  onDownload={() => toast.info('Download starts once storage is connected')}
+                  onDownload={download}
                   onExplain={async (f) => {
                     setAi({ open: true, loading: true, result: null, title: `Explaining ${f.name}` });
                     const res = await geminiAPI.explainCode({ fileId: f._id });
@@ -440,7 +449,7 @@ export default function ProjectDetails() {
               description="Rendered as it will appear on the public project page"
               action={
                 <Button size="sm" variant="ghost" icon="copy" onClick={() => {
-                  navigator.clipboard?.writeText(SAMPLE_README);
+                  navigator.clipboard?.writeText(data.readme || '');
                   toast.success('README copied');
                 }}>
                   Copy
@@ -448,7 +457,7 @@ export default function ProjectDetails() {
               }
             />
             <div className="px-6 py-6">
-              <MarkdownPreview source={SAMPLE_README} />
+              <MarkdownPreview source={readmeSource} />
             </div>
           </Card>
 
@@ -517,6 +526,7 @@ export default function ProjectDetails() {
         open={addMemberOpen}
         onClose={() => setAddMemberOpen(false)}
         existingIds={data.members.map((m) => m.userId)}
+        projectId={projectId}
         onAdd={async (payload) => {
           await memberAPI.add(projectId, payload);
           toast.success('Member added');
@@ -541,7 +551,7 @@ export default function ProjectDetails() {
         open={Boolean(previewFile)}
         file={previewFile}
         onClose={() => setPreviewFile(null)}
-        onDownload={() => toast.info('Download starts once storage is connected')}
+        onDownload={download}
         onExplain={async (f) => {
           setPreviewFile(null);
           setAi({ open: true, loading: true, result: null, title: `Explaining ${f.name}` });

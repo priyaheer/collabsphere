@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
           setStatus('authenticated');
         }
       } catch {
+        setToken(null);
         if (!cancelled) setStatus('anonymous');
       }
     }
@@ -38,10 +39,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const register = useCallback(async (payload) => {
-    const { user: me } = await authAPI.register(payload);
-    setUser(me);
-    setStatus('authenticated');
-    return me;
+    const result = await authAPI.register(payload);
+    setUser(null);
+    setStatus('anonymous');
+    return result;
   }, []);
 
   const logout = useCallback(async () => {

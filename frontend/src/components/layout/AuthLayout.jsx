@@ -26,7 +26,7 @@ export function AuthLayout({ title, subtitle, children, footer }) {
         </div>
 
         <p className="text-center text-[12px] text-faint lg:text-left">
-          Frontend demo — authentication is mocked until the API is connected.
+          Authentication is handled by the CollabSphere API.
         </p>
       </div>
 

@@ -20,7 +20,7 @@ function strengthOf(password) {
 const STRENGTH_LABEL = ['Too short', 'Weak', 'Fair', 'Good', 'Strong'];
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', username: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,10 +34,8 @@ export default function Register() {
   const validate = () => {
     const next = {};
     if (!form.name.trim()) next.name = 'Tell us what to call you.';
-    if (!form.username.trim()) next.username = 'Pick a username.';
-    else if (!/^[a-z0-9_]{3,20}$/.test(form.username))
-      next.username = 'Lowercase letters, numbers and underscores, 3–20 characters.';
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) next.email = 'That email address is not valid.';
+    else if (!form.email.trim().toLowerCase().endsWith('@gmail.com')) next.email = 'Use a Gmail address ending in @gmail.com.';
     if (form.password.length < 8) next.password = 'Use at least eight characters.';
     if (form.confirm !== form.password) next.confirm = 'The two passwords do not match.';
     setErrors(next);
@@ -51,10 +49,13 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
-      toast.success('Account created', { description: 'Verify your email to unlock public project pages.' });
-      navigate('/verify-email');
+      localStorage.setItem('collabsphere.pendingVerificationEmail', form.email.trim().toLowerCase());
+      toast.success('Account created', { description: 'Check Gmail for your verification link.' });
+      navigate('/verify-email', { state: { email: form.email.trim().toLowerCase() } });
     } catch (err) {
-      if (err.details?.field) setErrors({ [err.details.field]: err.message });
+      const fieldError = err.details?.errors?.[0];
+      if (fieldError?.field) setErrors({ [fieldError.field]: fieldError.message || err.message });
+      else if (err.details?.field) setErrors({ [err.details.field]: err.message });
       else setSubmitError(err.message || 'We could not create the account.');
     } finally {
       setLoading(false);
@@ -82,28 +83,16 @@ export default function Register() {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" error={errors.name} htmlFor="name">
-            <Input
-              id="name"
-              icon="user"
-              value={form.name}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder="Aarav Mehta"
-              error={errors.name}
-            />
-          </Field>
-          <Field label="Username" error={errors.username} htmlFor="username">
-            <Input
-              id="username"
-              icon="tag"
-              value={form.username}
-              onChange={(e) => set({ username: e.target.value.toLowerCase() })}
-              placeholder="aaravm"
-              error={errors.username}
-            />
-          </Field>
-        </div>
+        <Field label="Full name" error={errors.name} htmlFor="name">
+          <Input
+            id="name"
+            icon="user"
+            value={form.name}
+            onChange={(e) => set({ name: e.target.value })}
+            placeholder="Aarav Mehta"
+            error={errors.name}
+          />
+        </Field>
 
         <Field label="Email" error={errors.email} htmlFor="reg-email">
           <Input
@@ -112,7 +101,7 @@ export default function Register() {
             icon="mail"
             value={form.email}
             onChange={(e) => set({ email: e.target.value })}
-            placeholder="you@company.com"
+            placeholder="you@gmail.com"
             error={errors.email}
           />
         </Field>

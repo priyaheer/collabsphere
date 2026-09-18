@@ -4,7 +4,6 @@ import { Icon } from '../common/Icon.jsx';
 import { Avatar } from '../common/Avatar.jsx';
 import { Dropdown } from '../common/Dropdown.jsx';
 import { formatBytes, timeAgo } from '../../utils/format.js';
-import { useUsers } from '../../hooks/useUsers.js';
 
 export const FILE_TYPE_META = {
   javascript: { label: 'JavaScript', icon: 'code', color: '#ffb86b' },
@@ -33,8 +32,7 @@ export function FileIcon({ type, size = 16 }) {
 }
 
 export function FileRow({ file, onPreview, onDelete, onDownload, onExplain, className = '' }) {
-  const { byId } = useUsers();
-  const uploader = byId[file.uploadedById];
+  const uploader = file.uploadedBy;
   const meta = FILE_TYPE_META[file.type] || FILE_TYPE_META.other;
   const isCode = CODE_TYPES.includes(file.type) && file.content;
 

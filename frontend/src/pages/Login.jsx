@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 
 export default function Login() {
-  const [form, setForm] = useState({ email: 'aarav@collabsphere.dev', password: 'collabsphere', remember: true });
+  const [form, setForm] = useState({ email: '', password: '', remember: true });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,6 +23,7 @@ export default function Login() {
     const next = {};
     if (!form.email) next.email = 'Enter your email address.';
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) next.email = 'That email address is not valid.';
+    else if (!form.email.trim().toLowerCase().endsWith('@gmail.com')) next.email = 'Use a Gmail address ending in @gmail.com.';
     if (!form.password) next.password = 'Enter your password.';
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -38,6 +39,10 @@ export default function Login() {
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
       navigate(location.state?.from || '/dashboard', { replace: true });
     } catch (err) {
+      if (err.status === 403 && /verify your gmail address/i.test(err.message || '')) {
+        navigate('/verify-email', { replace: true, state: { email: form.email.trim().toLowerCase() } });
+        return;
+      }
       setSubmitError(err.message || 'We could not sign you in.');
     } finally {
       setLoading(false);
@@ -73,7 +78,7 @@ export default function Login() {
             autoComplete="email"
             value={form.email}
             onChange={(e) => set({ email: e.target.value })}
-            placeholder="you@company.com"
+            placeholder="you@gmail.com"
             error={errors.email}
           />
         </Field>
@@ -109,7 +114,7 @@ export default function Login() {
         </Button>
 
         <p className="rounded-lg border border-dashed border-line px-3 py-2.5 text-center text-[12px] text-faint">
-          Demo build: any email works, with a password of six characters or more.
+          Only Gmail addresses can access CollabSphere accounts.
         </p>
       </form>
     </AuthLayout>

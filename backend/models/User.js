@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -23,6 +22,16 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     password: { type: String, required: true, minlength: 6, select: false },
+    emailVerified: { type: Boolean, default: false },
+    emailVerifiedAt: { type: Date },
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpiresAt: { type: Date },
+    emailVerificationSentAt: { type: Date },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpiresAt: { type: Date },
+    passwordChangedAt: { type: Date },
+    loginFailedAttempts: { type: Number, default: 0, select: false },
+    loginLockedUntil: { type: Date, select: false },
     avatar: { type: String, default: "" },
     bio: { type: String, default: "", maxlength: 500 },
     skills: { type: [String], default: [] },
@@ -33,6 +42,13 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform(_doc, ret) {
         delete ret.password;
+        delete ret.emailVerificationTokenHash;
+        delete ret.passwordResetTokenHash;
+        delete ret.emailVerificationExpiresAt;
+        delete ret.emailVerificationSentAt;
+        delete ret.passwordResetExpiresAt;
+        delete ret.loginFailedAttempts;
+        delete ret.loginLockedUntil;
         delete ret.__v;
         return ret;
       },

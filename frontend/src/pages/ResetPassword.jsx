@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../components/layout/AuthLayout.jsx';
 import { Button } from '../components/common/Button.jsx';
 import { Field, PasswordInput } from '../components/common/Input.jsx';
@@ -8,6 +8,8 @@ import { authAPI } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 
 export default function ResetPassword() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
   const [form, setForm] = useState({ password: '', confirm: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,7 @@ export default function ResetPassword() {
   const submit = async (e) => {
     e.preventDefault();
     const next = {};
+    if (!token) next.token = 'Password reset link is missing or invalid.';
     if (form.password.length < 8) next.password = 'Use at least eight characters.';
     if (form.confirm !== form.password) next.confirm = 'The two passwords do not match.';
     setErrors(next);
@@ -25,10 +28,12 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      await authAPI.resetPassword({ token: 'demo-token', password: form.password });
+      await authAPI.resetPassword({ token, password: form.password, confirm: form.confirm });
       setDone(true);
       toast.success('Password changed');
       setTimeout(() => navigate('/login'), 1400);
+    } catch (err) {
+      toast.error(err.message || 'Password reset is not available yet.');
     } finally {
       setLoading(false);
     }
@@ -54,6 +59,12 @@ export default function ResetPassword() {
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4" noValidate>
+          {errors.token && (
+            <p className="flex items-center gap-1.5 text-[13px] text-danger">
+              <Icon name="alert" size={14} />
+              {errors.token}
+            </p>
+          )}
           <Field label="New password" error={errors.password} htmlFor="new-password">
             <PasswordInput
               id="new-password"

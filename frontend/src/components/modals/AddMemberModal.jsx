@@ -6,14 +6,15 @@ import { Avatar } from '../common/Avatar.jsx';
 import { Icon } from '../common/Icon.jsx';
 import { Select } from '../common/Input.jsx';
 import { cn } from '../../utils/cn.js';
-import { useUsers } from '../../hooks/useUsers.js';
 import { useDebounce } from '../../hooks/useDebounce.js';
+import { memberAPI } from '../../services/api.js';
 
-export function AddMemberModal({ open, onClose, onAdd, existingIds = [] }) {
-  const { users } = useUsers();
+export function AddMemberModal({ open, onClose, onAdd, existingIds = [], projectId }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [role, setRole] = useState('Member');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const debounced = useDebounce(query, 180);
 
@@ -22,8 +23,30 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [] }) {
       setQuery('');
       setSelected(null);
       setRole('Member');
+      setUsers([]);
     }
   }, [open]);
+
+  useEffect(() => {
+    let active = true;
+    async function search() {
+      if (!open || !projectId || !debounced.trim()) {
+        setUsers([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const rows = await memberAPI.search(projectId, debounced);
+        if (active) setUsers(rows);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    search();
+    return () => {
+      active = false;
+    };
+  }, [debounced, open, projectId]);
 
   const results = useMemo(() => {
     const needle = debounced.trim().toLowerCase();
@@ -71,7 +94,7 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [] }) {
       <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
         {results.length === 0 && (
           <p className="py-8 text-center text-[13px] text-muted">
-            No one matches that. Everyone else is already on the project.
+            {loading ? 'Searching…' : 'No one matches that. Everyone else is already on the project.'}
           </p>
         )}
         {results.map((user) => (

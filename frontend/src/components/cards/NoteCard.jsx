@@ -5,11 +5,9 @@ import { Avatar } from '../common/Avatar.jsx';
 import { Badge } from '../common/Badge.jsx';
 import { timeAgo } from '../../utils/format.js';
 import { markdownExcerpt } from '../../utils/markdown.js';
-import { useUsers } from '../../hooks/useUsers.js';
 
 export function NoteCard({ note, projectName }) {
-  const { byId } = useUsers();
-  const author = byId[note.authorId];
+  const author = note.author;
 
   return (
     <Link

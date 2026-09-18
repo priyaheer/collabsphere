@@ -48,13 +48,7 @@ export function AIResultModal({ open, onClose, title, subtitle, loading, result,
           <p className="text-[13.5px] text-muted">Working through the content…</p>
         </div>
       ) : (
-        <>
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-base px-3 py-2 text-[12px] text-muted">
-            <Icon name="info" size={13} className="shrink-0 text-faint" />
-            Generated from a mock response. Connect <span className="font-mono text-ink">/ai/*</span> to switch it live.
-          </div>
-          <MarkdownPreview source={result || ''} />
-        </>
+        <MarkdownPreview source={result || ''} />
       )}
     </Modal>
   );

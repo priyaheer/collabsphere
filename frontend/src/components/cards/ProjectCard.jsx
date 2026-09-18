@@ -7,12 +7,10 @@ import { AvatarGroup } from '../common/Avatar.jsx';
 import { ProgressBar } from '../common/ProgressBar.jsx';
 import { Dropdown } from '../common/Dropdown.jsx';
 import { timeAgo } from '../../utils/format.js';
-import { useUsers } from '../../hooks/useUsers.js';
 
 export function ProjectCard({ project, view = 'grid', onEdit, onDelete, onToggleStar }) {
-  const { byId } = useUsers();
-  const members = project.members.map((m) => byId[m.userId]).filter(Boolean);
-  const owner = byId[project.ownerId];
+  const members = project.members.map((m) => m.user).filter(Boolean);
+  const owner = project.owner || members.find((member) => member._id === project.ownerId);
 
   const menu = (
     <Dropdown

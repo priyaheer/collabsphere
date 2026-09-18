@@ -26,10 +26,23 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const allowedOrigins = new Set([env.CLIENT_URL].filter(Boolean));
+const isLocalDevOrigin = (origin) => {
+  if (env.isProd) return false;
+  try {
+    return ["localhost", "127.0.0.1"].includes(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+};
+
 app.use(helmet());
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin) || isLocalDevOrigin(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked origin: ${origin}`));
+    },
     credentials: true,
   })
 );

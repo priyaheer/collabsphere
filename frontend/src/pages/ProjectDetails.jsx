@@ -538,6 +538,8 @@ export default function ProjectDetails() {
         <GitHubRepositoryPanel
           projectId={projectId}
           repository={github.data}
+          loading={github.loading}
+          error={github.error}
           canManage={canManage}
           onImport={() => setGithubImportOpen(true)}
           onSync={async () => {

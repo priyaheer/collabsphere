@@ -55,13 +55,14 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 if (!env.isProd && !env.isTest) app.use(morgan("dev"));
 
-// General API rate limit - generous, just a backstop against abuse.
-// Sensitive routes (auth, AI) layer stricter limiters on top of this.
+// General API limit is only a backstop for ordinary application endpoints.
+// Auth, AI, and GitHub each have their own budgets and must not consume this bucket.
 app.use(
   "/api",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 300,
+    limit: 600,
+    skip: (req) => /^\/(auth|ai|gemini|github)(\/|$)/.test(req.path),
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: "Too many requests. Please try again later.", errors: [] },

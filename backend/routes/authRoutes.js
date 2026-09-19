@@ -32,7 +32,8 @@ const authLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 20,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many login attempts. Please try again later.", errors: [] },
@@ -40,7 +41,7 @@ const loginLimiter = rateLimit({
 
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many password reset attempts. Please try again later.", errors: [] },

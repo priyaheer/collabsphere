@@ -9,7 +9,7 @@ import { Button } from '../components/common/Button.jsx';
 import { Input } from '../components/common/Input.jsx';
 import { Icon } from '../components/common/Icon.jsx';
 import { SkeletonCard } from '../components/common/Skeleton.jsx';
-import { EmptyState } from '../components/common/EmptyState.jsx';
+import { EmptyState, ErrorState } from '../components/common/EmptyState.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { timeAgo, formatDate } from '../utils/format.js';
 import { projectAPI } from '../services/api.js';
@@ -66,6 +66,16 @@ export default function Members() {
         </div>
       )}
 
+      {!projects.loading && projects.error && <ErrorState title="Unable to load team members" message="Please try again." onRetry={projects.refetch} />}
+
+      {!projects.loading && !projects.error && users.length === 0 && (
+        <EmptyState
+          icon="users"
+          title="No team members yet"
+          description="Team members appear here when they belong to one of your projects."
+        />
+      )}
+
       {!projects.loading && users.length > 0 && rows.length === 0 && (
         <EmptyState
           icon="users"
@@ -79,7 +89,7 @@ export default function Members() {
         />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {!projects.loading && !projects.error && users.length > 0 && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map(({ user, projects: shared }) => (
           <Card key={user._id} className="flex flex-col p-5" interactive>
             <div className="flex items-start gap-3">
@@ -124,7 +134,7 @@ export default function Members() {
             </div>
           </Card>
         ))}
-      </div>
+      </div>}
     </AppLayout>
   );
 }

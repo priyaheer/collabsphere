@@ -37,10 +37,12 @@ export default function Dashboard() {
 
   const createProject = async (form) => {
     const created = await projectAPI.create(form);
-    if (form.githubRepository) await githubAPI.import(created._id, { fullName: form.githubRepository.fullName });
+    const importedRepository = form.githubRepository
+      ? await githubAPI.import(created._id, { fullName: form.githubRepository.fullName })
+      : null;
     toast.success('Project created', { description: `${created.name} is ready.` });
     projects.refetch();
-    navigate(`/projects/${created._id}`);
+    navigate(`/projects/${created._id}${importedRepository ? '?tab=github' : ''}`);
   };
 
   return (

@@ -71,9 +71,11 @@ export default function Projects({ scope = 'all' }) {
       toast.success('Project updated');
     } else {
       const created = await projectAPI.create(form);
-      if (form.githubRepository) await githubAPI.import(created._id, { fullName: form.githubRepository.fullName });
+      const importedRepository = form.githubRepository
+        ? await githubAPI.import(created._id, { fullName: form.githubRepository.fullName })
+        : null;
       toast.success('Project created', { description: `${created.name} is ready.` });
-      navigate(`/projects/${created._id}`);
+      navigate(`/projects/${created._id}${importedRepository ? '?tab=github' : ''}`);
     }
     setEditing(null);
     refetch();

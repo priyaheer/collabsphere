@@ -74,7 +74,11 @@ export async function exchangeCode(code) {
 
 export async function getGitHubUser(token) {
   const response = await fetch(`${GITHUB_API_URL}/user`, { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "CollabSphere-GitHub-OAuth" } });
-  if (!response.ok) throw ApiError.forbidden("GitHub could not verify this account");
+    if (!response.ok) {
+      const error = ApiError.forbidden("GitHub could not verify this account");
+      if (response.status === 401) error.githubAuth = true;
+      throw error;
+    }
   return response.json();
 }
 
@@ -85,7 +89,11 @@ export async function listGitHubRepositories(token) {
     const response = await fetch(`${GITHUB_API_URL}/user/repos?${query}`, {
       headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "CollabSphere-GitHub-OAuth" },
     });
-    if (!response.ok) throw ApiError.forbidden("GitHub could not load your repositories");
+    if (!response.ok) {
+      const error = ApiError.forbidden("GitHub could not load your repositories");
+      if (response.status === 401) error.githubAuth = true;
+      throw error;
+    }
     const batch = await response.json();
     repositories.push(...batch);
     if (batch.length < 100) break;

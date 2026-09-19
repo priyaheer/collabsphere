@@ -149,9 +149,12 @@ export default function Settings() {
                   </p>
                   <p className="mt-0.5 text-[12.5px] text-muted">Only your backend-encrypted GitHub credential is stored.</p>
                 </div>
-                <Button variant="secondary" icon="github" onClick={() => githubAPI.connect()}>
-                  {github?.connected ? 'Reconnect GitHub' : 'Connect GitHub'}
-                </Button>
+                {github?.connected ? (
+                  <div className="flex gap-2">
+                    <Button variant="secondary" icon="github" onClick={() => githubAPI.connect()}>Reconnect GitHub</Button>
+                    <Button variant="ghost" icon="x" onClick={async () => { await githubAPI.disconnect(); setGithub({ connected: false }); toast.success('GitHub disconnected'); }}>Disconnect</Button>
+                  </div>
+                ) : <Button variant="secondary" icon="github" onClick={() => githubAPI.connect()}>Connect GitHub</Button>}
               </div>
             </Card>
           )}

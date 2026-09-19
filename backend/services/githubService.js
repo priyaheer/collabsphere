@@ -46,7 +46,12 @@ async function githubRequest(path, options = {}, token) {
 
   if (!response.ok) {
     if (response.status === 404) throw ApiError.notFound("Repository was not found or you do not have access to it");
-    if (response.status === 401 || response.status === 403) throw ApiError.forbidden("GitHub denied access to this repository");
+    if (response.status === 401) {
+      const error = ApiError.forbidden("GitHub authorization has expired. Reconnect your GitHub account.");
+      error.githubAuth = true;
+      throw error;
+    }
+    if (response.status === 403) throw ApiError.forbidden("GitHub denied access to this repository");
     if (response.status === 429) throw ApiError.tooManyRequests("GitHub rate limit reached. Try again later.");
     throw ApiError.serviceUnavailable(`GitHub returned an unexpected error (${response.status})`);
   }

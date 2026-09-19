@@ -447,6 +447,11 @@ export const githubAPI = {
     return asArray(data.repositories || data);
   },
 
+  async disconnect() {
+    await request('/github/connection', { method: 'DELETE' });
+    return { ok: true };
+  },
+
   async get(projectId) {
     return unwrapOne(await request(`/projects/${projectId}/github`), 'repository');
   },

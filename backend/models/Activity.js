@@ -13,6 +13,8 @@ export const ACTIVITY_TYPES = [
   "FILE_DELETED",
   "README_GENERATED",
   "AI_REQUEST",
+  "GITHUB_REPOSITORY_IMPORTED",
+  "GITHUB_REPOSITORY_SYNCED",
 ];
 
 const activitySchema = new mongoose.Schema(

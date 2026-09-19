@@ -7,6 +7,12 @@ import { logActivity } from "../services/activityService.js";
 import { PUBLIC_USER_FIELDS } from "../models/User.js";
 import { notifyProjectMembers } from "../services/notificationService.js";
 import crypto from "crypto";
+import File from "../models/File.js";
+import Note from "../models/Note.js";
+import Activity from "../models/Activity.js";
+import Notification from "../models/Notification.js";
+import GitHubRepository from "../models/GitHubRepository.js";
+import { storage } from "../services/storageService.js";
 
 const OWNER_FIELDS = PUBLIC_USER_FIELDS;
 const MEMBER_SORT_FIELDS = ["createdAt", "updatedAt", "name"];
@@ -57,7 +63,12 @@ export const getProjects = asyncHandler(async (req, res) => {
     : filter;
 
   const [projects, total] = await Promise.all([
-    Project.find(query).sort(sort).skip(skip).limit(limit).populate("owner", OWNER_FIELDS),
+    Project.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate("owner", OWNER_FIELDS)
+      .populate("members.user", OWNER_FIELDS),
     Project.countDocuments(query),
   ]);
 
@@ -121,6 +132,15 @@ export const updateProject = asyncHandler(async (req, res) => {
 // DELETE /api/projects/:id
 export const deleteProject = asyncHandler(async (req, res) => {
   const { project } = await loadProjectWithAccess(req.params.id, req.user, "owner");
+  const files = await File.find({ project: project._id }).select("+path");
+  await Promise.all(files.map((file) => storage.remove(file)));
+  await Promise.all([
+    File.deleteMany({ project: project._id }),
+    Note.deleteMany({ project: project._id }),
+    Activity.deleteMany({ project: project._id }),
+    Notification.deleteMany({ project: project._id }),
+    GitHubRepository.deleteOne({ project: project._id }),
+  ]);
   await project.deleteOne();
   return sendSuccess(res, { message: "Project deleted successfully" });
 });

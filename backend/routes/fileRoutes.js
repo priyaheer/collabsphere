@@ -15,8 +15,8 @@ projectFilesRouter.get("/", protect, projectIdValidator, getProjectFiles);
 
 // Mounted at /api/files
 export const fileRouter = express.Router();
-fileRouter.get("/:id", protect, fileIdValidator, getFile);
-fileRouter.get("/:id/raw", protect, fileIdValidator, getFileRaw);
+fileRouter.get("/:id", optionalAuth, fileIdValidator, getFile);
+fileRouter.get("/:id/raw", optionalAuth, fileIdValidator, getFileRaw);
 fileRouter.delete("/:id", protect, fileIdValidator, deleteFile);
 
 export default fileRouter;

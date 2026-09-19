@@ -78,7 +78,7 @@ function CommitDetails({ commit, onClose }) {
   );
 }
 
-export function GitHubRepositoryPanel({ projectId, repository, onImport, onSync, canManage }) {
+export function GitHubRepositoryPanel({ projectId, repository, loading = false, error: repositoryError, onImport, onSync, canManage }) {
   const [selected, setSelected] = useState(null);
   const [file, setFile] = useState(null);
   const [fileLoading, setFileLoading] = useState(false);
@@ -120,6 +120,17 @@ export function GitHubRepositoryPanel({ projectId, repository, onImport, onSync,
   };
 
   if (!repository) {
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          <Card className="p-5"><div className="h-5 w-48 animate-pulse rounded bg-raised" /><div className="mt-3 h-4 w-80 animate-pulse rounded bg-raised" /></Card>
+          <Card className="p-5"><div className="h-64 animate-pulse rounded bg-raised" /></Card>
+        </div>
+      );
+    }
+    if (repositoryError) {
+      return <ErrorState title="Could not load the GitHub repository" message={repositoryError.message} onRetry={() => window.location.reload()} />;
+    }
     return (
       <EmptyState
         icon="github"

@@ -29,22 +29,27 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
   const ext = extensionOf(req.file.originalname);
   const { path: storedPath, storage: storageName } = await storage.save(req.file);
+  let file;
+  try {
+    file = await File.create({
+      originalName: req.file.originalname,
+      fileName: req.file.filename,
+      path: storedPath,
+      storage: storageName,
+      url: `/api/files/${req.file.filename}`,
+      mimeType: mimeForExtension(ext),
+      size: req.file.size,
+      extension: ext,
+      project: project._id,
+      uploadedBy: req.user._id,
+    });
 
-  const file = await File.create({
-    originalName: req.file.originalname,
-    fileName: req.file.filename,
-    path: storedPath,
-    storage: storageName,
-    url: `/api/files/${req.file.filename}`,
-    mimeType: req.file.mimetype || mimeForExtension(ext),
-    size: req.file.size,
-    extension: ext,
-    project: project._id,
-    uploadedBy: req.user._id,
-  });
-
-  file.url = `/api/files/${file._id}/raw`;
-  await file.save();
+    file.url = `/api/files/${file._id}/raw`;
+    await file.save();
+  } catch (error) {
+    await storage.remove({ path: storedPath });
+    throw error;
+  }
 
   await logActivity({
     user: req.user._id,
@@ -117,7 +122,10 @@ export const getFileRaw = asyncHandler(async (req, res) => {
   if (!isInsideUploadDir(file.path)) throw ApiError.forbidden("Invalid file location");
 
   res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
-  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(path.basename(file.originalName))}"`);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Disposition", [".html", ".svg"].includes(file.extension)
+    ? `attachment; filename="${encodeURIComponent(path.basename(file.originalName))}"`
+    : `inline; filename="${encodeURIComponent(path.basename(file.originalName))}"`);
   // Uploaded content is served but never executed - Content-Disposition/Content-Type
   // above ensure the browser treats it as data, not as a script to run.
   const stream = storage.createReadStream(file);

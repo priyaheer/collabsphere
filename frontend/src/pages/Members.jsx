@@ -47,11 +47,6 @@ export default function Members() {
       <PageHeader
         title="Team"
         description="Everyone you share a project with, and what they are on."
-        actions={
-          <Button variant="secondary" icon="mail" onClick={() => {}}>
-            Invite by email
-          </Button>
-        }
       />
 
       <div className="mb-5 max-w-sm">
@@ -59,10 +54,13 @@ export default function Members() {
       </div>
 
       {projects.loading && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+        <div>
+          <p className="mb-3 text-[13px] text-muted">Loading team...</p>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         </div>
       )}
 

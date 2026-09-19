@@ -28,7 +28,7 @@ export const searchUsers = asyncHandler(async (req, res) => {
     _id: { $nin: existingIds },
     $or: [{ username: regex }, { name: regex }, { email: regex }],
   })
-    .select(PUBLIC_USER_FIELDS)
+    .select(`${PUBLIC_USER_FIELDS} email`)
     .limit(10);
 
   return sendSuccess(res, { message: "Users fetched successfully", data: { users } });

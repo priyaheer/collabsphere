@@ -69,6 +69,12 @@ describe("project collaboration", () => {
       .send({ userId: memberId });
     assert.equal(added.status, 201);
 
+    const searchedByEmail = await request(app)
+      .get(`/api/projects/${project._id}/members/search?q=outsider%40gmail.com`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    assert.equal(searchedByEmail.status, 200);
+    assert.equal(searchedByEmail.body.data.users[0].email, "outsider@gmail.com");
+
     const notifications = await Notification.find({ recipient: memberId }).populate("sender", "name").populate("project", "name");
     assert.equal(notifications.length, 1);
     assert.equal(notifications[0].read, false);

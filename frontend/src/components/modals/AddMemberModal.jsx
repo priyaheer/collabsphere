@@ -16,6 +16,7 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [], project
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const debounced = useDebounce(query, 180);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [], project
       setSelected(null);
       setRole('Member');
       setUsers([]);
+      setError('');
     }
   }, [open]);
 
@@ -37,7 +39,12 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [], project
       setLoading(true);
       try {
         const rows = await memberAPI.search(projectId, debounced);
-        if (active) setUsers(rows);
+        if (active) {
+          setUsers(rows);
+          setError('');
+        }
+      } catch (requestError) {
+        if (active) setError(requestError.message || 'Unable to search people.');
       } finally {
         if (active) setLoading(false);
       }
@@ -52,15 +59,18 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [], project
     const needle = debounced.trim().toLowerCase();
     return users
       .filter((u) => !existingIds.includes(u._id))
-      .filter((u) => !needle || u.name.toLowerCase().includes(needle) || u.username.toLowerCase().includes(needle));
+      .filter((u) => !needle || u.name.toLowerCase().includes(needle) || u.username.toLowerCase().includes(needle) || u.email?.toLowerCase().includes(needle));
   }, [users, debounced, existingIds]);
 
   const submit = async () => {
     if (!selected) return;
     setSaving(true);
+    setError('');
     try {
       await onAdd({ userId: selected._id, role });
       onClose();
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to add this person to the project.');
     } finally {
       setSaving(false);
     }
@@ -87,9 +97,11 @@ export function AddMemberModal({ open, onClose, onAdd, existingIds = [], project
         icon="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name or username"
+        placeholder="Search by name, username or email"
         autoFocus
       />
+
+      {error && <p className="mt-2 text-[12.5px] text-danger">{error}</p>}
 
       <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
         {results.length === 0 && (

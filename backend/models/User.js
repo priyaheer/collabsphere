@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
     bio: { type: String, default: "", maxlength: 500 },
     skills: { type: [String], default: [] },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    githubId: { type: String, default: "", index: true },
+    githubLogin: { type: String, default: "" },
+    githubAvatarUrl: { type: String, default: "" },
+    githubAccessToken: { type: String, default: "", select: false },
+    githubConnectedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -48,6 +53,8 @@ const userSchema = new mongoose.Schema(
         delete ret.passwordResetOtpAttempts;
         delete ret.passwordResetOtpSentAt;
         delete ret.passwordResetVerifiedAt;
+        delete ret.githubAccessToken;
+        ret.githubConnected = Boolean(ret.githubId);
         return ret;
       },
     },

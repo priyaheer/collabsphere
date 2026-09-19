@@ -14,7 +14,7 @@ import { useAsync } from '../hooks/useAsync.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { greeting } from '../utils/format.js';
-import { activityAPI, analyticsAPI, geminiAPI, projectAPI } from '../services/api.js';
+import { activityAPI, analyticsAPI, geminiAPI, githubAPI, projectAPI } from '../services/api.js';
 
 const QUICK_ACTIONS = [
   { label: 'Create project', icon: 'folder', hint: 'Start a workspace', action: 'project' },
@@ -37,6 +37,7 @@ export default function Dashboard() {
 
   const createProject = async (form) => {
     const created = await projectAPI.create(form);
+    if (form.githubRepository) await githubAPI.import(created._id, { fullName: form.githubRepository.fullName });
     toast.success('Project created', { description: `${created.name} is ready.` });
     projects.refetch();
     navigate(`/projects/${created._id}`);

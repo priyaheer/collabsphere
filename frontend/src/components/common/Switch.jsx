@@ -8,18 +8,21 @@ export function Switch({ checked, onChange, label, description, id }) {
       role="switch"
       id={id}
       aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-200',
-        checked ? 'border-transparent bg-accent' : 'border-line bg-raised'
+        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border p-0.5',
+        'transition-[background-color,border-color,box-shadow] duration-200',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-base',
+        checked ? 'border-accent bg-accent' : 'border-lineStrong bg-raised'
       )}
     >
       <span
         className={cn(
-          'absolute top-0.5 rounded-full bg-white transition-transform duration-200',
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
+          'block h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.3)]',
+          'transition-transform duration-200 ease-out',
+          checked ? 'translate-x-[20px]' : 'translate-x-0'
         )}
-        style={{ height: 18, width: 18 }}
       />
     </button>
   );

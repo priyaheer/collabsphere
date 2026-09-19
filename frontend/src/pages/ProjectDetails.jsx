@@ -25,6 +25,8 @@ import { AddMemberModal } from '../components/modals/AddMemberModal.jsx';
 import { UploadModal } from '../components/modals/UploadModal.jsx';
 import { FilePreviewModal } from '../components/modals/FilePreviewModal.jsx';
 import { AIResultModal } from '../components/ai/AIResultModal.jsx';
+import { GitHubImportModal } from '../components/modals/GitHubImportModal.jsx';
+import { GitHubRepositoryPanel } from '../components/github/GitHubRepositoryPanel.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -36,6 +38,7 @@ import {
   memberAPI,
   notesAPI,
   projectAPI,
+  githubAPI,
 } from '../services/api.js';
 
 const TABS = [
@@ -45,6 +48,7 @@ const TABS = [
   { value: 'members', label: 'Members', icon: 'users' },
   { value: 'analytics', label: 'Analytics', icon: 'chart' },
   { value: 'readme', label: 'README', icon: 'book' },
+  { value: 'github', label: 'GitHub', icon: 'github' },
   { value: 'ai', label: 'AI', icon: 'sparkles' },
 ];
 
@@ -59,6 +63,7 @@ export default function ProjectDetails() {
   const [removingMember, setRemovingMember] = useState(null);
   const [deletingFile, setDeletingFile] = useState(null);
   const [ai, setAi] = useState({ open: false, loading: false, result: null, title: '' });
+  const [githubImportOpen, setGithubImportOpen] = useState(false);
 
   const toast = useToast();
   const navigate = useNavigate();
@@ -70,6 +75,13 @@ export default function ProjectDetails() {
   const members = useAsync(() => memberAPI.list(projectId), [projectId]);
   const activity = useAsync(() => projectAPI.activity(projectId), [projectId]);
   const stats = useAsync(() => analyticsAPI.overview({ range: '30d', projectId }), [projectId]);
+  const github = useAsync(
+    () => githubAPI.get(projectId).catch((error) => {
+      if (error.status === 404) return null;
+      throw error;
+    }),
+    [projectId]
+  );
 
   const data = project.data;
   const owner = data?.owner;
@@ -222,6 +234,11 @@ export default function ProjectDetails() {
             <Button variant="secondary" icon="edit" onClick={() => setEditOpen(true)}>
               Edit
             </Button>
+            {canManage && (
+              <Button variant="secondary" icon="github" onClick={() => setGithubImportOpen(true)}>
+                {github.data ? 'Change GitHub' : 'Import from GitHub'}
+              </Button>
+            )}
             <Button variant="ai" icon="sparkles" onClick={() => runAI('readme')}>
               Generate README
             </Button>
@@ -517,6 +534,24 @@ export default function ProjectDetails() {
         </section>
       )}
 
+      {tab === 'github' && (
+        <GitHubRepositoryPanel
+          projectId={projectId}
+          repository={github.data}
+          canManage={canManage}
+          onImport={() => setGithubImportOpen(true)}
+          onSync={async () => {
+            try {
+              await githubAPI.sync(projectId);
+              await github.refetch();
+              toast.success('GitHub repository synced');
+            } catch (error) {
+              toast.error(error.message || 'Could not sync GitHub repository');
+            }
+          }}
+        />
+      )}
+
       {/* AI */}
       {tab === 'ai' && (
         <section className="grid gap-4 sm:grid-cols-2">
@@ -558,6 +593,18 @@ export default function ProjectDetails() {
           await projectAPI.update(projectId, form);
           toast.success('Project updated');
           project.refetch();
+        }}
+      />
+
+      <GitHubImportModal
+        open={githubImportOpen}
+        existingRepository={github.data}
+        onClose={() => setGithubImportOpen(false)}
+        onImport={async (url) => {
+          await githubAPI.import(projectId, url);
+          await github.refetch();
+          changeTab('github');
+          toast.success('GitHub repository imported');
         }}
       />
 

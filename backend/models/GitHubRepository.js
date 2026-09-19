@@ -13,7 +13,8 @@ const githubTreeEntrySchema = new mongoose.Schema(
 
 const githubRepositorySchema = new mongoose.Schema(
   {
-    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true, unique: true, index: true },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true, unique: true },
+    connectedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
     owner: { type: String, required: true },
     name: { type: String, required: true },
     fullName: { type: String, required: true },
@@ -33,8 +34,6 @@ const githubRepositorySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-githubRepositorySchema.index({ project: 1 }, { unique: true });
 
 githubRepositorySchema.set("toJSON", {
   transform(_doc, ret) {

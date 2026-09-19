@@ -21,6 +21,8 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
+import githubRoutes from "./routes/githubRoutes.js";
+import githubAccountRoutes from "./routes/githubAccountRoutes.js";
 
 validateEnv();
 
@@ -72,10 +74,12 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/github", githubAccountRoutes);
 app.use("/api/projects/:projectId/members", memberRoutes);
 app.use("/api/projects/:projectId/notes", projectNotesRouter);
 app.use("/api/projects/:projectId/files", projectFilesRouter);
 app.use("/api/projects/:projectId/analytics", analyticsRoutes);
+app.use("/api/projects/:projectId/github", githubRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/notes", noteRouter);
 app.use("/api/files", fileRouter);

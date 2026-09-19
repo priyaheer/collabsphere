@@ -428,6 +428,54 @@ export const projectAPI = {
   },
 };
 
+export const githubAPI = {
+  async connection() {
+    const data = unwrap(await request('/github/connection'));
+    return {
+      ...data,
+      connected: data.connected === true || data.githubConnected === true,
+    };
+  },
+
+  async connect() {
+    const data = unwrap(await request('/github/connect'));
+    window.location.assign(data.url);
+  },
+
+  async repositories() {
+    const data = unwrap(await request('/github/repositories'));
+    return asArray(data.repositories || data);
+  },
+
+  async get(projectId) {
+    return unwrapOne(await request(`/projects/${projectId}/github`), 'repository');
+  },
+
+  async import(projectId, url) {
+    const body = typeof url === 'string' ? { url } : url;
+    return unwrapOne(await request(`/projects/${projectId}/github/import`, { method: 'POST', body }), 'repository');
+  },
+
+  async sync(projectId) {
+    return unwrapOne(await request(`/projects/${projectId}/github/sync`, { method: 'POST' }), 'repository');
+  },
+
+  async file(projectId, path, ref) {
+    const params = new URLSearchParams({ path });
+    if (ref) params.set('ref', ref);
+    return unwrapOne(await request(`/projects/${projectId}/github/file?${params}`), 'file');
+  },
+
+  async commits(projectId, page = 1) {
+    const data = unwrap(await request(`/projects/${projectId}/github/commits?page=${page}`));
+    return asArray(data.commits);
+  },
+
+  async commit(projectId, sha) {
+    return unwrapOne(await request(`/projects/${projectId}/github/commits/${sha}`), 'commit');
+  },
+};
+
 export const notesAPI = {
   async list({ projectId, q = '', tag = 'all', sort = 'recent' } = {}) {
     const rows = await listAllProjectRows(projectId, async (id) => {
@@ -688,6 +736,7 @@ export default {
   authAPI,
   userAPI,
   projectAPI,
+  githubAPI,
   notesAPI,
   fileAPI,
   memberAPI,

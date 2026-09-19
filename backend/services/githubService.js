@@ -26,19 +26,19 @@ export function parseRepositoryUrl(value) {
   return { owner, name };
 }
 
-function githubHeaders() {
+function githubHeaders(token) {
   return {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": USER_AGENT,
-    ...(env.GITHUB_TOKEN ? { Authorization: `Bearer ${env.GITHUB_TOKEN}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
-async function githubRequest(path, options = {}) {
+async function githubRequest(path, options = {}, token) {
   let response;
   try {
-    response = await fetch(`${GITHUB_API}${path}`, { ...options, headers: { ...githubHeaders(), ...(options.headers || {}) } });
+    response = await fetch(`${GITHUB_API}${path}`, { ...options, headers: { ...githubHeaders(token), ...(options.headers || {}) } });
   } catch (error) {
     console.error("[github] network error:", error.message);
     throw ApiError.serviceUnavailable("GitHub could not be reached right now");
@@ -85,15 +85,15 @@ function mapTreeEntry(entry, prefix = "") {
   };
 }
 
-async function getCompleteTree(repository, ref) {
-  const root = await githubRequest(repositoryPath(repository, `/git/trees/${encodeURIComponent(ref)}?recursive=1`));
+async function getCompleteTree(repository, ref, token) {
+  const root = await githubRequest(repositoryPath(repository, `/git/trees/${encodeURIComponent(ref)}?recursive=1`), {}, token);
   if (!root.truncated) return root.tree.map((entry) => mapTreeEntry(entry));
 
   const complete = [];
   const pending = [{ sha: ref, prefix: "" }];
   while (pending.length) {
     const current = pending.shift();
-    const subtree = await githubRequest(repositoryPath(repository, `/git/trees/${encodeURIComponent(current.sha)}`));
+    const subtree = await githubRequest(repositoryPath(repository, `/git/trees/${encodeURIComponent(current.sha)}`), {}, token);
     for (const entry of subtree.tree) {
       const mapped = mapTreeEntry(entry, current.prefix);
       complete.push(mapped);
@@ -103,18 +103,18 @@ async function getCompleteTree(repository, ref) {
   return complete;
 }
 
-export async function importRepository(repositoryUrl) {
+export async function importRepository(repositoryUrl, token) {
   const repository = parseRepositoryUrl(repositoryUrl);
-  const metadata = await githubRequest(repositoryPath(repository));
+  const metadata = await githubRequest(repositoryPath(repository), {}, token);
   const mapped = mapRepository(metadata);
-  const tree = await getCompleteTree(repository, mapped.defaultBranch);
+  const tree = await getCompleteTree(repository, mapped.defaultBranch, token);
   return { ...mapped, tree };
 }
 
-export async function getFileContent(repository, path, ref) {
+export async function getFileContent(repository, path, ref, token) {
   const cleanPath = String(path || "").replace(/^\/+/, "");
   if (!cleanPath || cleanPath.includes("..")) throw ApiError.badRequest("A valid repository file path is required");
-  const content = await githubRequest(repositoryPath(repository, `/contents/${cleanPath.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref || repository.defaultBranch)}`));
+  const content = await githubRequest(repositoryPath(repository, `/contents/${cleanPath.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref || repository.defaultBranch)}`), {}, token);
   if (Array.isArray(content) || content.type !== "file") throw ApiError.badRequest("The selected repository entry is not a file");
   if (content.encoding !== "base64") throw ApiError.serviceUnavailable("GitHub returned an unsupported file encoding");
   return {
@@ -127,9 +127,9 @@ export async function getFileContent(repository, path, ref) {
   };
 }
 
-export async function listCommits(repository, { page = 1, perPage = 30 } = {}) {
+export async function listCommits(repository, { page = 1, perPage = 30 } = {}, token) {
   const query = new URLSearchParams({ sha: repository.defaultBranch, page: String(page), per_page: String(Math.min(perPage, 100)) });
-  const commits = await githubRequest(repositoryPath(repository, `/commits?${query}`));
+  const commits = await githubRequest(repositoryPath(repository, `/commits?${query}`), {}, token);
   return commits.map((commit) => ({
     sha: commit.sha,
     message: commit.commit.message,
@@ -137,13 +137,12 @@ export async function listCommits(repository, { page = 1, perPage = 30 } = {}) {
     author: commit.author ? { login: commit.author.login, avatarUrl: commit.author.avatar_url } : null,
     commitAuthor: commit.commit.author,
     committedAt: commit.commit.author?.date || commit.commit.committer?.date,
-    filesChanged: commit.committer ? undefined : undefined,
   }));
 }
 
-export async function getCommit(repository, sha) {
+export async function getCommit(repository, sha, token) {
   if (!/^[a-f0-9]{7,40}$/i.test(String(sha || ""))) throw ApiError.badRequest("Invalid commit SHA");
-  const commit = await githubRequest(repositoryPath(repository, `/commits/${encodeURIComponent(sha)}`));
+  const commit = await githubRequest(repositoryPath(repository, `/commits/${encodeURIComponent(sha)}`), {}, token);
   return {
     sha: commit.sha,
     message: commit.commit.message,

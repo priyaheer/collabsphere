@@ -199,6 +199,12 @@ async list(params) {
 To go live:
 
 1. Set `VITE_API_URL` in `.env` to your API base (e.g. `http://localhost:5000/api`).
+
+### GitHub repository import
+
+GitHub import runs through per-user GitHub OAuth on the backend. Configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL`, and `GITHUB_TOKEN_ENCRYPTION_KEY` in `backend/.env`. The OAuth app should request `repo` and `read:user` scopes. Never put GitHub client secrets or user tokens in the frontend environment.
+
+From the project detail page, choose **Import from GitHub**, enter a repository URL, and use the GitHub tab to browse the imported tree, read live file contents, inspect commit details, and sync the repository again.
 2. Set `VITE_USE_MOCKS=false`.
 3. Delete the mock branch of each method once its endpoint exists.
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppLayout } from '../components/layout/AppLayout.jsx';
 import { PageHeader } from '../components/layout/PageHeader.jsx';
 import { Card, CardHeader } from '../components/common/Card.jsx';
@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { timeAgo } from '../utils/format.js';
-import { authAPI, userAPI } from '../services/api.js';
+import { authAPI, githubAPI, userAPI } from '../services/api.js';
 
 const SECTIONS = [
   { value: 'account', label: 'Account', icon: 'user' },
@@ -42,6 +42,11 @@ export default function Settings() {
     aiResults: false,
     weeklyDigest: true,
   });
+  const [github, setGithub] = useState(null);
+
+  useEffect(() => {
+    githubAPI.connection().then(setGithub).catch(() => setGithub({ connected: false }));
+  }, []);
 
   const saveAccount = async () => {
     const updated = await userAPI.updateProfile(account);
@@ -131,6 +136,24 @@ export default function Settings() {
               </Card>
 
             </>
+          )}
+
+          {section === 'account' && (
+            <Card>
+              <CardHeader title="GitHub" description="Connect your own GitHub account for repository imports" />
+              <div className="flex flex-wrap items-center gap-3 p-5">
+                <Icon name="github" size={22} className="text-muted" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13.5px] font-medium text-ink">
+                    {github?.connected ? `Connected as @${github.login}` : 'No GitHub account connected'}
+                  </p>
+                  <p className="mt-0.5 text-[12.5px] text-muted">Only your backend-encrypted GitHub credential is stored.</p>
+                </div>
+                <Button variant="secondary" icon="github" onClick={() => githubAPI.connect()}>
+                  {github?.connected ? 'Reconnect GitHub' : 'Connect GitHub'}
+                </Button>
+              </div>
+            </Card>
           )}
 
           {section === 'notifications' && (

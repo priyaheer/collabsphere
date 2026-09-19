@@ -13,7 +13,7 @@ import { ProjectFormModal } from '../components/modals/ProjectFormModal.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { useDebounce } from '../hooks/useDebounce.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { projectAPI } from '../services/api.js';
+import { githubAPI, projectAPI } from '../services/api.js';
 
 const COPY = {
   all: {
@@ -71,6 +71,7 @@ export default function Projects({ scope = 'all' }) {
       toast.success('Project updated');
     } else {
       const created = await projectAPI.create(form);
+      if (form.githubRepository) await githubAPI.import(created._id, { fullName: form.githubRepository.fullName });
       toast.success('Project created', { description: `${created.name} is ready.` });
       navigate(`/projects/${created._id}`);
     }

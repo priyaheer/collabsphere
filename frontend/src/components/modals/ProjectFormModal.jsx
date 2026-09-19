@@ -5,6 +5,7 @@ import { Field, Input, Textarea } from '../common/Input.jsx';
 import { Icon } from '../common/Icon.jsx';
 import { Switch } from '../common/Switch.jsx';
 import { cn } from '../../utils/cn.js';
+import { githubAPI } from '../../services/api.js';
 
 const SUGGESTED_TECH = ['React', 'Node.js', 'TypeScript', 'MongoDB', 'Express', 'Python', 'Docker', 'Tailwind'];
 
@@ -16,6 +17,12 @@ export function ProjectFormModal({ open, onClose, onSubmit, project }) {
   const [techInput, setTechInput] = useState('');
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState('manual');
+  const [repositories, setRepositories] = useState([]);
+  const [repositoriesLoading, setRepositoriesLoading] = useState(false);
+  const [repositoriesError, setRepositoriesError] = useState('');
+  const [githubConnection, setGithubConnection] = useState(null);
+  const [selectedRepository, setSelectedRepository] = useState(null);
   const isEdit = Boolean(project);
 
   useEffect(() => {
@@ -23,8 +30,37 @@ export function ProjectFormModal({ open, onClose, onSubmit, project }) {
       setForm(project ? { ...EMPTY, ...project } : EMPTY);
       setErrors({});
       setTechInput('');
+      setMode('manual');
+      setSelectedRepository(null);
+      setRepositories([]);
+      setGithubConnection(null);
+      setRepositoriesError('');
     }
   }, [open, project]);
+
+  const loadGitHubRepositories = async () => {
+    setRepositoriesLoading(true);
+    setRepositoriesError('');
+    try {
+      const connection = await githubAPI.connection();
+      setGithubConnection(connection);
+      if (!connection.connected) {
+        setRepositories([]);
+        return;
+      }
+      setRepositories(await githubAPI.repositories());
+    } catch (error) {
+      setRepositories([]);
+      setRepositoriesError(error.message || 'GitHub repositories could not be loaded.');
+    } finally {
+      setRepositoriesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || isEdit || mode !== 'github') return;
+    loadGitHubRepositories();
+  }, [open, isEdit, mode]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -45,10 +81,14 @@ export function ProjectFormModal({ open, onClose, onSubmit, project }) {
   };
 
   const submit = async () => {
+    if (!isEdit && mode === 'github' && !selectedRepository) {
+      setErrors({ repository: 'Choose a repository to import.' });
+      return;
+    }
     if (!validate()) return;
     setSaving(true);
     try {
-      await onSubmit(form);
+      await onSubmit(mode === 'github' ? { ...form, githubRepository: selectedRepository } : form);
       onClose();
     } finally {
       setSaving(false);
@@ -74,6 +114,47 @@ export function ProjectFormModal({ open, onClose, onSubmit, project }) {
       }
     >
       <div className="space-y-5">
+        {!isEdit && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              { value: 'manual', icon: 'plus', title: 'Create Project Manually', copy: 'Start with your own project details.' },
+              { value: 'github', icon: 'github', title: 'Import from GitHub', copy: 'Choose from your accessible repositories.' },
+            ].map((option) => (
+              <button key={option.value} type="button" onClick={() => setMode(option.value)} className={cn('flex items-start gap-3 rounded-xl border p-3.5 text-left transition-colors', mode === option.value ? 'border-accent bg-accentSoft' : 'border-line hover:border-lineStrong')}>
+                <Icon name={option.icon} size={17} className={cn('mt-0.5 shrink-0', mode === option.value ? 'text-accent' : 'text-faint')} />
+                <span><span className="block text-[13.5px] font-medium text-ink">{option.title}</span><span className="mt-0.5 block text-[12px] leading-snug text-muted">{option.copy}</span></span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!isEdit && mode === 'github' && (
+          <Field label="GitHub repository" required error={errors.repository}>
+            {repositoriesLoading ? <p className="rounded-xl border border-line px-3 py-3 text-[13px] text-muted">Checking your connected GitHub account...</p> : repositoriesError ? (
+              <div className="rounded-xl border border-danger/40 bg-danger/5 px-3 py-3">
+                <p className="text-[13px] text-danger">{repositoriesError}</p>
+                <Button type="button" size="sm" variant="ghost" icon="refresh" className="mt-2" onClick={loadGitHubRepositories}>Try again</Button>
+              </div>
+            ) : !githubConnection?.connected ? (
+              <div className="rounded-xl border border-line px-3 py-3">
+                <p className="text-[13px] text-muted">Connect GitHub in Settings before importing a repository.</p>
+                <Button type="button" size="sm" variant="secondary" icon="github" className="mt-3" onClick={() => githubAPI.connect()}>Connect GitHub</Button>
+              </div>
+            ) : (
+              <div className="max-h-56 space-y-2 overflow-auto">
+                {repositories.map((repository) => (
+                  <button key={repository.id} type="button" onClick={() => { setSelectedRepository(repository); set({ name: repository.name, description: repository.description, techStack: repository.language ? [repository.language] : [] }); }} className={cn('flex w-full items-start gap-3 rounded-lg border p-3 text-left', selectedRepository?.id === repository.id ? 'border-accent bg-accentSoft' : 'border-line hover:border-lineStrong')}>
+                    <Icon name="github" size={16} className="mt-0.5 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium text-ink">{repository.fullName}</span><span className="mt-0.5 block truncate text-[12px] text-muted">{repository.description || 'No description'} · {repository.visibility}</span></span>
+                  </button>
+                ))}
+                {!repositories.length && <p className="rounded-xl border border-line px-3 py-3 text-[13px] text-muted">No accessible repositories were returned by GitHub.</p>}
+              </div>
+            )}
+          </Field>
+        )}
+
+        {(isEdit || mode === 'manual') && <>
         <Field label="Project name" required error={errors.name} htmlFor="project-name">
           <Input
             id="project-name"
@@ -188,6 +269,7 @@ export function ProjectFormModal({ open, onClose, onSubmit, project }) {
             description="The assistant drafts a README from the name, description and stack. You can edit it after."
           />
         </div>
+        </>}
       </div>
     </Modal>
   );

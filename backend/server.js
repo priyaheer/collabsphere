@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -53,7 +54,7 @@ app.use(cookieParser());
 if (!env.isProd && !env.isTest) app.use(morgan("dev"));
 
 // General API rate limit - generous, just a backstop against abuse.
-// Sensitive routes (auth, gemini) layer stricter limiters on top of this.
+// Sensitive routes (auth, AI) layer stricter limiters on top of this.
 app.use(
   "/api",
   rateLimit({
@@ -78,6 +79,7 @@ app.use("/api/projects/:projectId/analytics", analyticsRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/notes", noteRouter);
 app.use("/api/files", fileRouter);
+app.use("/api/ai", geminiRoutes);
 app.use("/api/gemini", geminiRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
@@ -90,7 +92,20 @@ app.use(errorHandler);
 async function start() {
   try {
     await connectDB();
-    app.listen(env.PORT, () => {
+    const server = http.createServer(app);
+
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(
+          `[server] Port ${env.PORT} is already in use. Stop the other server using this port, or set PORT to a different value in backend/.env and update frontend/.env VITE_API_URL to match.`
+        );
+      } else {
+        console.error("[server] Server error:", err.message);
+      }
+      process.exit(1);
+    });
+
+    server.listen(env.PORT, () => {
       console.log(`[server] CollabSphere API listening on port ${env.PORT} (${env.NODE_ENV})`);
     });
   } catch (err) {

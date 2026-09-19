@@ -43,7 +43,7 @@ export function AppLayout({ children, fullBleed = false }) {
       </div>
 
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[110] md:hidden">
           <div className="absolute inset-0 animate-fade-in bg-black/60" onClick={() => setDrawerOpen(false)} />
           <div className="relative h-full w-[260px] animate-slide-in-right">
             <Sidebar collapsed={false} onNavigate={() => setDrawerOpen(false)} unread={unread} />
@@ -59,7 +59,7 @@ export function AppLayout({ children, fullBleed = false }) {
         />
         <main
           className={cn(
-            'flex-1 pb-20 md:pb-0',
+            'flex-1 animate-fade-in pb-20 md:pb-0',
             fullBleed ? '' : 'mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6 lg:px-8 lg:py-8'
           )}
         >

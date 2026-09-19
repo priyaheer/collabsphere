@@ -69,7 +69,7 @@ export default function Files() {
       setAi({ open: true, loading: false, result: res.content, title: `Explaining ${file.name}` });
     } catch (error) {
       setAi({ open: false, loading: false, result: null, title: '' });
-      toast.error(error.message || 'Gemini could not explain this file.');
+      toast.error(error.message || 'AI could not explain this file.');
     }
   };
 

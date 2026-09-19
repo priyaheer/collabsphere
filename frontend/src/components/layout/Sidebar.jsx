@@ -46,15 +46,16 @@ function NavItem({ item, collapsed, onNavigate }) {
       title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cn(
-          'group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13.5px] font-medium transition-colors duration-150',
+          'group relative flex items-center gap-3 rounded-xl px-2.5 py-2 text-[13.5px] font-medium transition-all duration-200',
           collapsed && 'justify-center px-0',
-          isActive ? 'bg-raised text-ink' : 'text-muted hover:bg-raised hover:text-ink'
+          isActive
+            ? 'cs-gradient-fill text-white shadow-[0_8px_20px_-8px_var(--c-accent)]'
+            : 'text-muted hover:bg-raised hover:text-ink hover:translate-x-0.5'
         )
       }
     >
       {({ isActive }) => (
         <>
-          {isActive && <span className="absolute left-0 h-4 w-0.5 rounded-r-full bg-accent" />}
           <Icon
             name={item.icon}
             size={17}
@@ -83,7 +84,7 @@ export function Sidebar({ collapsed = false, onToggle, onNavigate, unread = 0 })
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-line bg-surface transition-[width] duration-200',
+        'cs-surface m-3 flex h-[calc(100%-24px)] flex-col rounded-2xl transition-[width] duration-200',
         collapsed ? 'w-[72px]' : 'w-[248px]'
       )}
     >

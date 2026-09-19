@@ -82,9 +82,9 @@ export function SearchOverlay({ open, onClose }) {
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[12vh]">
+    <div className="fixed inset-0 z-[120] flex items-start justify-center px-4 pt-[12vh]">
       <div className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-xl animate-scale-in overflow-hidden rounded-2xl border border-line bg-surface shadow-lift">
+      <div className="cs-modal-panel relative z-10 w-full max-w-xl animate-scale-in overflow-hidden rounded-2xl border border-line shadow-lift">
         <div className="flex items-center gap-3 border-b border-line px-4">
           <Icon name="search" size={17} className="shrink-0 text-faint" />
           <input

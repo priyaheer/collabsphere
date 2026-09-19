@@ -20,15 +20,15 @@ export function StatCard({ label, value, delta, icon, loading = false, accent, c
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border border-line bg-surface p-4 transition-colors duration-200 hover:border-lineStrong',
+        'group cs-surface cs-glow-hover relative overflow-hidden p-4',
         className
       )}
     >
       <div className="flex items-center justify-between">
         <span className="text-[12.5px] text-muted">{label}</span>
         <span
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-faint transition-colors group-hover:text-ink"
-          style={accent ? { color: accent } : undefined}
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110 cs-gradient-fill"
+          style={accent ? { background: accent } : undefined}
         >
           <Icon name={icon} size={14} />
         </span>

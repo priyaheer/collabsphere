@@ -12,7 +12,7 @@ export function NoteCard({ note, projectName }) {
   return (
     <Link
       to={`/notes/${note._id}`}
-      className="group flex flex-col rounded-xl border border-line bg-surface p-5 transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-lineStrong hover:shadow-lift"
+      className="group cs-surface cs-glow-hover flex flex-col p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-display text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink group-hover:text-accent">

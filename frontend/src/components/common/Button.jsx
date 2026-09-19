@@ -6,11 +6,11 @@ import { Spinner } from './Spinner.jsx';
 
 const VARIANTS = {
   primary:
-    'bg-accent text-white border border-transparent hover:brightness-110 active:brightness-95 shadow-[0_6px_20px_-10px_var(--c-accent)]',
+    'cs-gradient-fill text-white border border-transparent hover:brightness-110 hover:-translate-y-px active:translate-y-0 active:brightness-95 shadow-[0_8px_24px_-10px_var(--c-accent)] hover:shadow-[0_12px_32px_-10px_var(--c-violet)]',
   secondary:
-    'bg-raised text-ink border border-line hover:border-lineStrong hover:bg-surface',
+    'bg-raised text-ink border border-line hover:border-lineStrong hover:bg-surface hover:-translate-y-px',
   ghost: 'bg-transparent text-muted border border-transparent hover:text-ink hover:bg-raised',
-  outline: 'bg-transparent text-ink border border-lineStrong hover:bg-raised',
+  outline: 'bg-transparent text-ink border border-lineStrong hover:bg-raised hover:border-[var(--c-accent)]',
   danger: 'bg-danger text-white border border-transparent hover:brightness-110',
   /* Reserved for anything the assistant does, so AI actions are recognisable. */
   ai: 'text-ink border border-line bg-raised hover:border-lineStrong relative overflow-hidden',

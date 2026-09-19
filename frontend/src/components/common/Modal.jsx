@@ -21,7 +21,7 @@ export function Modal({ open, onClose, title, description, size = 'md', children
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[110] flex items-end justify-center p-0 sm:items-center sm:p-6">
       <div
         className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-[2px]"
         onClick={onClose}
@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, description, size = 'md', children
         aria-label={title}
         className={cn(
           'relative z-10 flex max-h-[92vh] w-full flex-col animate-scale-in overflow-hidden',
-          'rounded-t-2xl border border-line bg-surface shadow-lift sm:rounded-2xl',
+          'cs-modal-panel rounded-t-2xl border border-line shadow-lift sm:rounded-2xl',
           WIDTHS[size],
           className
         )}

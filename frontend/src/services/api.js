@@ -630,7 +630,7 @@ export const searchAPI = {
 
 export const geminiAPI = {
   async chat({ prompt, context }) {
-    const result = unwrap(await request('/gemini/explain', {
+    const result = unwrap(await request('/ai/explain', {
       method: 'POST',
       body: { content: prompt, type: context?.type === 'file' ? 'code' : 'note' },
     })).result;
@@ -643,21 +643,21 @@ export const geminiAPI = {
       const file = await fileAPI.get(fileId);
       content = file.content || `${file.name}\n${file.mimeType || ''}`;
     }
-    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: content || '', type: 'code' } })).result;
+    const result = unwrap(await request('/ai/explain', { method: 'POST', body: { content: content || '', type: 'code' } })).result;
     return { content: result };
   },
 
   async explainNote({ noteId, content }) {
     let source = content;
     if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
-    const result = unwrap(await request('/gemini/explain', { method: 'POST', body: { content: source || '', type: 'note', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
+    const result = unwrap(await request('/ai/explain', { method: 'POST', body: { content: source || '', type: 'note', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
     return { content: result };
   },
 
   async improveNote({ noteId, content }) {
     let source = content;
     if (!source && noteId && noteId !== 'draft') source = (await notesAPI.get(noteId)).content;
-    const result = unwrap(await request('/gemini/docs', { method: 'POST', body: { code: source || '', language: 'markdown', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
+    const result = unwrap(await request('/ai/docs', { method: 'POST', body: { code: source || '', language: 'markdown', noteId: noteId !== 'draft' ? noteId : undefined } })).result;
     return { content: result };
   },
 
@@ -668,7 +668,7 @@ export const geminiAPI = {
     const features = toList(form.features, '\n')
       .map((item) => item.trim().replace(/^[-*]\s*/, ''))
       .filter(Boolean);
-    const data = unwrap(await request('/gemini/readme', {
+    const data = unwrap(await request('/ai/readme', {
       method: 'POST',
       body: {
         ...form,
@@ -682,6 +682,8 @@ export const geminiAPI = {
 
 };
 
+export const aiAPI = geminiAPI;
+
 export default {
   authAPI,
   userAPI,
@@ -694,4 +696,5 @@ export default {
   activityAPI,
   searchAPI,
   geminiAPI,
+  aiAPI,
 };

@@ -26,17 +26,17 @@ export function Topbar({ onOpenSearch, onOpenSidebar, onUnreadChange }) {
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-line px-4 cs-glass md:px-6">
+    <header className="sticky top-0 z-[90] mx-3 mt-3 flex h-16 items-center gap-3 rounded-2xl px-4 cs-glass border border-line md:px-6">
       <IconButton icon="menu" label="Open menu" className="md:hidden" onClick={onOpenSidebar} />
 
       <button
         type="button"
         onClick={onOpenSearch}
-        className="group flex h-9 flex-1 items-center gap-2.5 rounded-lg border border-line bg-base px-3 text-left transition-colors hover:border-lineStrong md:max-w-sm"
+        className="group flex h-9 flex-1 items-center gap-2.5 rounded-full border border-line bg-raised px-3.5 text-left transition-all duration-200 hover:border-lineStrong hover:shadow-[0_0_0_1px_var(--c-accent-soft)] md:max-w-sm"
       >
         <Icon name="search" size={15} className="text-faint" />
         <span className="flex-1 truncate text-[13px] text-faint">Search everything</span>
-        <kbd className="hidden rounded border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-faint md:block">
+        <kbd className="hidden rounded-full border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-faint md:block">
           ⌘K
         </kbd>
       </button>

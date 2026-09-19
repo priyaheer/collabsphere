@@ -5,6 +5,7 @@ export default {
     extend: {
       colors: {
         base: 'var(--c-base)',
+        modal: 'var(--c-modal)',
         surface: 'var(--c-surface)',
         raised: 'var(--c-raised)',
         line: 'var(--c-line)',
@@ -25,11 +26,11 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
-      borderRadius: { xl: '12px', '2xl': '16px', '3xl': '22px' },
+      borderRadius: { xl: '14px', '2xl': '20px', '3xl': '26px' },
       boxShadow: {
         soft: '0 1px 2px rgba(0,0,0,.18), 0 8px 24px -12px rgba(0,0,0,.35)',
-        lift: '0 18px 40px -20px rgba(8,10,16,.75)',
-        glow: '0 0 0 1px var(--c-accent-soft), 0 12px 40px -18px var(--c-accent)',
+        lift: '0 18px 40px -20px rgba(4,2,10,.8)',
+        glow: '0 0 0 1px var(--c-accent-soft), 0 16px 44px -16px var(--c-accent), 0 16px 44px -16px var(--c-violet)',
       },
       keyframes: {
         'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },

@@ -13,7 +13,7 @@ async function resolveNoteContent(noteId, user) {
   return note.content;
 }
 
-// POST /api/gemini/explain
+// POST /api/ai/explain (also available as /api/gemini/explain for compatibility)
 // Response shape matches the spec exactly: { success, result }
 export const explain = asyncHandler(async (req, res) => {
   const { content, type, noteId } = req.body;
@@ -22,7 +22,7 @@ export const explain = asyncHandler(async (req, res) => {
   return res.status(200).json({ success: true, result });
 });
 
-// POST /api/gemini/docs
+// POST /api/ai/docs (also available as /api/gemini/docs for compatibility)
 // Response shape matches the spec exactly: { success, result }
 export const docs = asyncHandler(async (req, res) => {
   const { code, language, noteId } = req.body;
@@ -31,7 +31,7 @@ export const docs = asyncHandler(async (req, res) => {
   return res.status(200).json({ success: true, result });
 });
 
-// POST /api/gemini/readme
+// POST /api/ai/readme (also available as /api/gemini/readme for compatibility)
 // Response shape matches the spec exactly: { success, readme }
 export const readme = asyncHandler(async (req, res) => {
   const payload = req.body;

@@ -179,13 +179,13 @@
       ]
     },
     {
-      "name": "Gemini AI",
+      "name": "Groq AI",
       "item": [
         {
           "name": "Explain Code",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/gemini/explain",
+            "url": "{{baseUrl}}/ai/explain",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"content\": \"function add(a, b) { return a + b; }\",\n  \"type\": \"code\"\n}" }
           }
@@ -194,7 +194,7 @@
           "name": "Explain Note",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/gemini/explain",
+            "url": "{{baseUrl}}/ai/explain",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"content\": \"# Sprint notes\\nWe decided to use JWT auth.\",\n  \"type\": \"note\"\n}" }
           }
@@ -203,7 +203,7 @@
           "name": "Generate Docs",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/gemini/docs",
+            "url": "{{baseUrl}}/ai/docs",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"code\": \"function add(a, b) { return a + b; }\",\n  \"language\": \"javascript\"\n}" }
           }
@@ -212,7 +212,7 @@
           "name": "Generate README",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/gemini/readme",
+            "url": "{{baseUrl}}/ai/readme",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"projectName\": \"CollabSphere\",\n  \"description\": \"AI-powered developer collaboration platform\",\n  \"technologies\": [\"React\", \"Node.js\", \"MongoDB\"],\n  \"features\": [\"Auth\", \"Notes\", \"File sharing\"],\n  \"installation\": \"npm install\",\n  \"usage\": \"npm run dev\"\n}" }
           }

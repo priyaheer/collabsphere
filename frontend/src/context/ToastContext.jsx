@@ -53,7 +53,7 @@ export function ToastProvider({ children }) {
                 key={t.id}
                 role="status"
                 className={cn(
-                  'pointer-events-auto flex animate-slide-in-right items-start gap-3 rounded-xl border border-line bg-surface p-3.5 shadow-lift cs-glass'
+                  'cs-modal-panel pointer-events-auto flex animate-slide-in-right items-start gap-3 rounded-xl border border-line p-3.5 shadow-lift'
                 )}
               >
                 <Icon name={tone.icon} size={17} className="mt-px shrink-0" style={{ color: tone.color }} />

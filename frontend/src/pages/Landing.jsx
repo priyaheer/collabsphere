@@ -38,8 +38,8 @@ function LandingNav() {
         scrolled ? 'border-b border-line cs-glass' : 'border-b border-transparent'
       )}
     >
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-6 px-5">
-        <Link to="/" aria-label="CollabSphere home">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-3 px-4 sm:gap-6 sm:px-5">
+        <Link to="/" aria-label="CollabSphere home" className="min-w-0 shrink">
           <Logo size={26} />
         </Link>
 
@@ -55,7 +55,7 @@ function LandingNav() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={toggleTheme}
@@ -67,7 +67,7 @@ function LandingNav() {
           <Link to="/login" className="hidden px-3 py-2 text-[13.5px] text-muted transition-colors hover:text-ink sm:block">
             Log in
           </Link>
-          <Button to="/register" variant="primary" size="sm">
+          <Button to="/register" variant="primary" size="sm" className="px-2.5 sm:px-3">
             Get started
           </Button>
           <button
@@ -105,7 +105,7 @@ function LandingNav() {
 /* The hero's memorable moment: a real-looking workspace, built from divs. */
 function HeroPreview() {
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div
         className="pointer-events-none absolute -inset-16 opacity-60 blur-3xl"
         style={{
@@ -113,19 +113,19 @@ function HeroPreview() {
             'radial-gradient(45% 45% at 60% 35%, var(--c-accent-soft), transparent 70%), radial-gradient(40% 40% at 30% 70%, rgba(161,119,255,.14), transparent 70%)',
         }}
       />
-      <div className="relative overflow-hidden rounded-2xl border border-line bg-surface shadow-lift">
+      <div className="relative min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift">
         <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-          <span className="flex gap-1.5">
+          <span className="flex shrink-0 gap-1.5">
             {['#ff6b6b', '#fbbf24', '#4ade80'].map((c) => (
               <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c, opacity: 0.65 }} />
             ))}
           </span>
-          <span className="ml-2 rounded-md border border-line px-2 py-0.5 font-mono text-[11px] text-faint">
+          <span className="ml-2 min-w-0 flex-1 truncate rounded-md border border-line px-2 py-0.5 font-mono text-[11px] text-faint">
             collabsphere.dev/projects/atlas-api-gateway
           </span>
         </div>
 
-        <div className="flex">
+        <div className="flex min-w-0">
           <div className="hidden w-[140px] shrink-0 flex-col gap-1 border-r border-line p-3 sm:flex">
             {[
               { icon: 'dashboard', label: 'Dashboard' },
@@ -149,12 +149,12 @@ function HeroPreview() {
           </div>
 
           <div className="min-w-0 flex-1 p-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <p className="font-display text-[15px] font-semibold text-ink">Atlas API Gateway</p>
                 <p className="mt-0.5 text-[11.5px] text-faint">3 members · updated 4 hours ago</p>
               </div>
-              <span className="rounded-md border border-line px-2 py-1 text-[11px] text-ai">
+              <span className="max-w-[42%] shrink truncate rounded-md border border-line px-2 py-1 text-[11px] text-ai sm:max-w-none sm:shrink-0">
                 README generated
               </span>
             </div>
@@ -181,7 +181,7 @@ function HeroPreview() {
                   Explain
                 </span>
               </div>
-              <pre className="overflow-hidden p-3 font-mono text-[10.5px] leading-[1.7] text-muted">
+              <pre className="max-w-full overflow-x-auto p-3 font-mono text-[10.5px] leading-[1.7] text-muted">
 {`const count = await redis.incr(key);
 if (count === 1) await redis.pexpire(key, WINDOW_MS);
 return { allowed: count <= limit };`}
@@ -217,7 +217,7 @@ function SectionHeading({ eyebrow, title, body, align = 'left' }) {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-base">
+    <div className="min-h-screen overflow-x-hidden bg-base">
       <LandingNav />
 
       {/* Hero */}
@@ -227,14 +227,14 @@ export default function Landing() {
           className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
           style={{ background: 'radial-gradient(60% 100% at 50% 0%, var(--c-accent-soft), transparent 70%)' }}
         />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 px-5 pb-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:pb-24">
-          <div className="animate-slide-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-ok" />
-              Code explanation and README drafts now in every project
+        <div className="relative mx-auto grid min-w-0 max-w-[1200px] items-center gap-12 px-4 pb-20 sm:px-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] xl:gap-14 xl:pb-24">
+          <div className="min-w-0 animate-slide-up">
+            <span className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] text-muted">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ok" />
+              <span className="min-w-0 truncate">Code explanation and README drafts now in every project</span>
             </span>
 
-            <h1 className="mt-6 font-display text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-ink sm:text-[56px]">
+            <h1 className="mt-6 max-w-full font-display text-[38px] font-semibold leading-[1.05] tracking-[-0.035em] text-ink sm:text-[56px]">
               Your project documents itself
               <span className="block text-muted">while you build it</span>
             </h1>
@@ -251,12 +251,12 @@ export default function Landing() {
             </div>
 
             <p className="mt-5 flex items-center gap-2 text-[12.5px] text-faint">
-              <Icon name="check" size={13} className="text-ok" />
+              <Icon name="check" size={13} className="shrink-0 text-ok" />
               Free for solo work. No card required.
             </p>
           </div>
 
-          <div className="animate-slide-up lg:-mr-10" style={{ animationDelay: '120ms' }}>
+          <div className="min-w-0 animate-slide-up md:max-w-[760px] xl:-mr-10 xl:max-w-none" style={{ animationDelay: '120ms' }}>
             <HeroPreview />
           </div>
         </div>
@@ -264,14 +264,14 @@ export default function Landing() {
 
       {/* Features */}
       <section id="features" className="border-b border-line py-20 sm:py-24">
-        <div className="mx-auto max-w-[1200px] px-5">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-5">
           <SectionHeading
             eyebrow="What you get"
             title="Everything a project needs to stay understandable"
             body="Six things engineers do every week, kept in one place instead of four."
           />
 
-          <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
             {FEATURES.map((feature) => (
               <article key={feature.title} className="group bg-surface p-6 transition-colors hover:bg-raised">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line text-muted transition-colors group-hover:text-accent">
@@ -289,10 +289,10 @@ export default function Landing() {
 
       {/* How it works — a real sequence, so it is numbered */}
       <section className="border-b border-line py-20 sm:py-24">
-        <div className="mx-auto max-w-[1200px] px-5">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-5">
           <SectionHeading eyebrow="How it works" title="Four steps from empty workspace to a public doc page" />
 
-          <ol className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-12 grid gap-8 md:grid-cols-2 xl:grid-cols-4">
             {HOW_STEPS.map((step, i) => (
               <li key={step.title} className="relative border-t border-line pt-5">
                 <span className="absolute -top-px left-0 h-px w-10 bg-accent" />
@@ -307,7 +307,7 @@ export default function Landing() {
 
       {/* AI */}
       <section id="ai" className="relative border-b border-line py-20 sm:py-24">
-        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 sm:px-5 md:px-6 xl:grid-cols-2 xl:px-5">
           <div>
             <SectionHeading
               eyebrow="The assistant"
@@ -332,7 +332,7 @@ export default function Landing() {
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
               <Icon name="sparkles" size={15} className="text-ai" />
               <span className="text-[13px] text-muted">Context</span>
-              <span className="rounded-md border border-line px-2 py-0.5 font-mono text-[11.5px] text-ink">
+              <span className="min-w-0 truncate rounded-md border border-line px-2 py-0.5 font-mono text-[11.5px] text-ink">
                 rateLimiter.js
               </span>
             </div>
@@ -368,8 +368,8 @@ export default function Landing() {
 
       {/* Collaboration */}
       <section id="collaboration" className="border-b border-line py-20 sm:py-24">
-        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 lg:grid-cols-2">
-          <div className="order-2 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift lg:order-1">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 sm:px-5 md:px-6 xl:grid-cols-2 xl:px-5">
+          <div className="order-2 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift xl:order-1">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <span className="font-display text-[13.5px] font-semibold text-ink">Members</span>
               <span className="rounded-md border border-line px-2 py-0.5 text-[11.5px] text-muted">3 people</span>
@@ -390,12 +390,12 @@ export default function Landing() {
                   <span className="block truncate text-[13.5px] font-medium text-ink">{m.name}</span>
                   <span className="block text-[11.5px] text-faint">@{m.handle}</span>
                 </span>
-                <span className="rounded-md border border-line px-2 py-0.5 text-[11.5px] text-muted">{m.role}</span>
+                <span className="shrink-0 rounded-md border border-line px-2 py-0.5 text-[11.5px] text-muted">{m.role}</span>
               </div>
             ))}
           </div>
 
-          <div className="order-1 lg:order-2">
+          <div className="order-1 xl:order-2">
             <SectionHeading
               eyebrow="Collaboration"
               title="Roles that match how teams actually work"
@@ -421,7 +421,7 @@ export default function Landing() {
 
       {/* Pricing */}
       <section id="pricing" className="border-b border-line py-20 sm:py-24">
-        <div className="mx-auto max-w-[1200px] px-5">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-5">
           <SectionHeading
             align="center"
             eyebrow="Pricing"
@@ -429,7 +429,7 @@ export default function Landing() {
             body="Billing is not wired up in this build — the plans below show the shape of it."
           />
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
@@ -480,7 +480,7 @@ export default function Landing() {
           className="pointer-events-none absolute inset-0"
           style={{ background: 'radial-gradient(50% 80% at 50% 100%, var(--c-accent-soft), transparent 70%)' }}
         />
-        <div className="relative mx-auto max-w-2xl px-5 text-center">
+        <div className="relative mx-auto max-w-2xl px-4 text-center sm:px-5">
           <LogoMark size={40} className="mx-auto" />
           <h2 className="mt-6 font-display text-[30px] font-semibold leading-tight tracking-[-0.025em] text-ink sm:text-[38px]">
             Start with one project you keep re-explaining
@@ -502,8 +502,8 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="py-14">
-        <div className="mx-auto max-w-[1200px] px-5">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-5">
+          <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-[1.4fr_repeat(3,1fr)]">
             <div>
               <Logo size={26} />
               <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-muted">

@@ -116,7 +116,7 @@ collabsphere/
     │       ├── ProjectFormModal.jsx  # create and edit share one form
     │       ├── AddMemberModal.jsx
     │       ├── UploadModal.jsx       # drag & drop with per-file progress
-    │       └── FilePreviewModal.jsx
+    │       └── PreviewModal.jsx
     │
     ├── pages/
     │   ├── Landing.jsx             ├── Files.jsx

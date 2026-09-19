@@ -97,7 +97,7 @@ export default function NoteEditor() {
       setAi({ open: true, loading: false, result: res.content, title });
     } catch (error) {
       setAi({ open: false, loading: false, result: null, title: '' });
-      toast.error(error.message || 'Gemini could not process this note.');
+      toast.error(error.message || 'AI could not process this note.');
     }
   };
 

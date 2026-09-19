@@ -15,8 +15,8 @@ export const env = {
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
-  GEMINI_API_KEY: (process.env.GEMINI_API_KEY || "").trim(),
-  GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+  GROQ_API_KEY: (process.env.GROQ_API_KEY || "").trim(),
+  GROQ_MODEL: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
   CLIENT_URL: (process.env.CLIENT_URL || "http://localhost:5173").trim(),
   EMAIL_FROM: (process.env.EMAIL_FROM || "").trim(),
   SMTP_HOST: (process.env.SMTP_HOST || "").trim(),
@@ -37,8 +37,8 @@ export function validateEnv() {
       `Missing required environment variables: ${missing.join(", ")}. Copy .env.example to .env and fill them in.`
     );
   }
-  if (!env.GEMINI_API_KEY) {
-    console.warn("[env] GEMINI_API_KEY is not set - AI endpoints will respond with 503.");
+  if (!env.GROQ_API_KEY) {
+    console.warn("[env] GROQ_API_KEY is not set - AI endpoints will respond with 503.");
   }
 
 }

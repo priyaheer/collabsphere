@@ -8,29 +8,31 @@
 ------------------------------------------------------------------- */
 :root,
 :root[data-theme='dark'] {
-  --c-base: #0b0e14;
-  --c-surface: #12161f;
-  --c-raised: #171d29;
-  --c-line: #222a39;
-  --c-line-strong: #2e3849;
-  --c-ink: #e7eaf2;
-  --c-muted: #99a3b8;
-  --c-faint: #6b7589;
-  --c-accent: #6e8bff;
-  --c-accent-soft: rgba(110, 139, 255, 0.16);
-  --c-violet: #a177ff;
+  --c-base: #08070c;
+  --c-modal: #0e0b16;
+  --c-surface: #17131f;
+  --c-raised: #211b2b;
+  --c-line: rgba(168, 139, 250, 0.14);
+  --c-line-strong: rgba(196, 160, 255, 0.28);
+  --c-ink: #f2eefb;
+  --c-muted: #a79fc0;
+  --c-faint: #6f6787;
+  --c-accent: #b57bff;
+  --c-accent-soft: rgba(181, 123, 255, 0.18);
+  --c-violet: #ff7ad9;
   --c-ai: #ffb86b;
   --c-ok: #4ade80;
   --c-warn: #fbbf24;
   --c-danger: #ff6b6b;
-  --c-glass: rgba(18, 22, 31, 0.72);
-  --c-grid: rgba(255, 255, 255, 0.035);
-  --shadow-color: 8 10 16;
+  --c-glass: #120e1a;
+  --c-grid: rgba(181, 123, 255, 0.05);
+  --shadow-color: 4 2 10;
   color-scheme: dark;
 }
 
 :root[data-theme='light'] {
   --c-base: #f6f7fb;
+  --c-modal: #ffffff;
   --c-surface: #ffffff;
   --c-raised: #ffffff;
   --c-line: #e4e7ef;
@@ -38,14 +40,14 @@
   --c-ink: #10141c;
   --c-muted: #5e6779;
   --c-faint: #8b93a5;
-  --c-accent: #4763e4;
-  --c-accent-soft: rgba(71, 99, 228, 0.1);
-  --c-violet: #7c4fe0;
+  --c-accent: #8b3fe0;
+  --c-accent-soft: rgba(139, 63, 224, 0.1);
+  --c-violet: #d6379e;
   --c-ai: #c2710c;
   --c-ok: #16a34a;
   --c-warn: #b45309;
   --c-danger: #dc2626;
-  --c-glass: rgba(255, 255, 255, 0.78);
+  --c-glass: #ffffff;
   --c-grid: rgba(16, 20, 28, 0.045);
   --shadow-color: 120 130 160;
   color-scheme: light;
@@ -63,6 +65,16 @@ body {
   font-feature-settings: 'cv02', 'cv03', 'ss01';
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Ambient purple/pink glow field behind the whole app (dark mode only). */
+:root[data-theme='dark'] body {
+  background:
+    radial-gradient(680px 420px at 8% -6%, rgba(181, 123, 255, 0.16), transparent 60%),
+    radial-gradient(620px 420px at 96% 8%, rgba(255, 122, 217, 0.10), transparent 60%),
+    radial-gradient(900px 600px at 50% 110%, rgba(139, 63, 224, 0.08), transparent 60%),
+    var(--c-base);
+  background-attachment: fixed;
 }
 
 ::selection { background: var(--c-accent-soft); color: var(--c-ink); }
@@ -88,12 +100,38 @@ body {
   .cs-surface {
     background: var(--c-surface);
     border: 1px solid var(--c-line);
-    border-radius: 14px;
+    border-radius: 18px;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 12px 30px -18px rgba(4, 2, 10, 0.65);
   }
   .cs-glass {
     background: var(--c-glass);
-    backdrop-filter: saturate(150%) blur(14px);
-    -webkit-backdrop-filter: saturate(150%) blur(14px);
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 12px 30px -18px rgba(4, 2, 10, 0.65);
+  }
+  .cs-modal-panel {
+    background: var(--c-modal);
+  }
+  /* Premium hover glow: lift + soft purple/pink halo. Applied via Card's `interactive` prop. */
+  .cs-glow-hover {
+    transition: transform 220ms cubic-bezier(.2,.8,.3,1), box-shadow 260ms ease, border-color 220ms ease;
+  }
+  .cs-glow-hover:hover {
+    transform: translateY(-3px);
+    border-color: var(--c-line-strong);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+      0 0 0 1px rgba(181, 123, 255, 0.18),
+      0 24px 48px -24px rgba(181, 123, 255, 0.35),
+      0 24px 48px -24px rgba(255, 122, 217, 0.18);
+  }
+  /* Reusable pink/purple gradient text or fills. */
+  .cs-gradient-text {
+    background: linear-gradient(90deg, var(--c-accent), var(--c-violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .cs-gradient-fill {
+    background: linear-gradient(135deg, var(--c-accent), var(--c-violet));
   }
   /* The faint blueprint grid used behind hero and empty canvases. */
   .cs-grid {

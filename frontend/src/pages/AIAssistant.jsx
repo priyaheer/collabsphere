@@ -20,6 +20,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [thinking, setThinking] = useState(false);
+  const [error, setError] = useState('');
   const [context, setContext] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef(null);
@@ -69,10 +70,13 @@ export default function AIAssistant() {
     const userMessage = { id: `u_${Date.now()}`, role: 'user', content: text, at: new Date().toISOString() };
     setMessages((m) => [...m, userMessage]);
     setDraft('');
+    setError('');
     setThinking(true);
     try {
       const reply = await geminiAPI.chat({ prompt: text, context, history: messages });
       setMessages((m) => [...m, reply]);
+    } catch (requestError) {
+      setError(requestError.message || 'The AI assistant could not respond. Please try again.');
     } finally {
       setThinking(false);
     }
@@ -172,6 +176,7 @@ export default function AIAssistant() {
 
           <div className="border-t border-line px-4 py-3">
             <div className="mx-auto max-w-3xl">
+              {error && <p className="mb-2 text-center text-[13px] text-danger">{error}</p>}
               <div className="flex items-end gap-2 rounded-xl border border-line bg-surface p-2 transition-colors focus-within:border-lineStrong">
                 <textarea
                   value={draft}
@@ -198,7 +203,7 @@ export default function AIAssistant() {
                 </Button>
               </div>
               <p className="mt-2 text-center text-[11.5px] text-faint">
-                Responses are generated server-side through the CollabSphere Gemini API.
+                Responses are generated server-side through the CollabSphere Groq API.
               </p>
             </div>
           </div>

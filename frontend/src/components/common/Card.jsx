@@ -5,9 +5,8 @@ export function Card({ as: Tag = 'div', interactive = false, className = '', chi
   return (
     <Tag
       className={cn(
-        'cs-surface',
-        interactive &&
-          'transition-[border-color,transform,box-shadow] duration-200 hover:border-lineStrong hover:-translate-y-0.5 hover:shadow-lift',
+        'cs-surface animate-scale-in',
+        interactive && 'cs-glow-hover cursor-pointer',
         className
       )}
       {...props}

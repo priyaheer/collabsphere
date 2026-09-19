@@ -69,14 +69,14 @@ export function ProjectCard({ project, view = 'grid', onEdit, onDelete, onToggle
   }
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-lineStrong hover:shadow-lift">
+    <div className="group cs-surface cs-glow-hover relative flex flex-col overflow-hidden">
       <span
         className="absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ background: `linear-gradient(90deg, transparent, ${project.accent}, transparent)` }}
       />
       <div className="flex items-start gap-3 p-5 pb-4">
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line transition-transform duration-200 group-hover:scale-105"
           style={{ color: project.accent }}
         >
           <Icon name="folder" size={18} />

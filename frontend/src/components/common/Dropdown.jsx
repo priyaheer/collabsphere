@@ -15,7 +15,7 @@ export function Dropdown({ trigger, items = [], align = 'right', width = 'w-56',
         <div
           role="menu"
           className={cn(
-            'absolute z-50 mt-2 origin-top animate-scale-in overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-lift',
+            'cs-modal-panel absolute z-[100] mt-2 origin-top animate-scale-in overflow-hidden rounded-xl border border-line p-1 shadow-lift',
             align === 'right' ? 'right-0' : 'left-0',
             width
           )}

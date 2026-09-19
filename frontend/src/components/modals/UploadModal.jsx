@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '../common/Modal.jsx';
 import { Button } from '../common/Button.jsx';
 import { Icon } from '../common/Icon.jsx';
@@ -12,9 +12,34 @@ import { FileIcon } from '../cards/FileRow.jsx';
 export function UploadModal({ open, onClose, onUpload, projects = [], defaultProjectId }) {
   const [dragging, setDragging] = useState(false);
   const [queue, setQueue] = useState([]);
-  const [projectId, setProjectId] = useState(defaultProjectId || projects[0]?._id || '');
+  const projectOptions = useMemo(
+    () => projects.map((p) => ({ value: p._id || p.id, label: p.name })).filter((p) => p.value),
+    [projects]
+  );
+  const [projectId, setProjectId] = useState(defaultProjectId || projectOptions[0]?.value || '');
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+  if (!open) {
+    setQueue([]);
+    setDragging(false);
+    setUploading(false);
+
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+
+    return;
+  }
+
+  const nextProjectId = defaultProjectId || projectOptions[0]?.value || '';
+  setProjectId((current) => current || nextProjectId);
+
+  if (inputRef.current) {
+    inputRef.current.value = '';
+  }
+}, [defaultProjectId, open, projectOptions]);
 
   const addFiles = (fileList) => {
     const items = Array.from(fileList).map((file) => ({
@@ -26,6 +51,7 @@ export function UploadModal({ open, onClose, onUpload, projects = [], defaultPro
       progress: 0,
     }));
     setQueue((q) => [...q, ...items]);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const start = async () => {
@@ -58,13 +84,19 @@ export function UploadModal({ open, onClose, onUpload, projects = [], defaultPro
           <Button variant="ghost" onClick={onClose} disabled={uploading}>
             Cancel
           </Button>
-          <Button variant="primary" icon="upload" onClick={start} disabled={!queue.length || !projectId} isLoading={uploading}>
+          <Button
+            variant="primary"
+            icon="upload"
+            onClick={start}
+            disabled={!queue.length || !projectId || uploading}
+            isLoading={uploading}
+          >
             Upload {queue.length ? `${queue.length} file${queue.length > 1 ? 's' : ''}` : ''}
           </Button>
         </>
       }
     >
-      {projects.length > 0 && (
+      {projectOptions.length > 0 && (
         <div className="mb-4">
           <label htmlFor="upload-project" className="mb-1.5 block text-[13px] font-medium text-muted">
             Destination project
@@ -73,7 +105,7 @@ export function UploadModal({ open, onClose, onUpload, projects = [], defaultPro
             id="upload-project"
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            options={projects.map((p) => ({ value: p._id, label: p.name }))}
+            options={projectOptions}
           />
         </div>
       )}

@@ -52,7 +52,7 @@ function normalizeError(err) {
     return { statusCode: 400, message: "Malformed JSON in request body", errors: [] };
   }
 
-  // Anything from an external service (e.g. Gemini) that we've already
+  // Anything from an external service (e.g. Groq) that we've already
   // tagged as operational should keep its own message but never leak internals.
   if (err.isOperational) {
     return { statusCode: err.statusCode || 500, message: err.message, errors: err.errors || [] };

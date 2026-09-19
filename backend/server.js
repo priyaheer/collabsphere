@@ -69,9 +69,21 @@ app.use(
   })
 );
 
+// Root health check
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "CollabSphere API is running",
+    status: "healthy",
+  });
+});
+
 // GET /api/health
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({ success: true, message: "CollabSphere API is running" });
+  res.status(200).json({
+    success: true,
+    message: "CollabSphere API is running",
+  });
 });
 
 app.use("/api/auth", authRoutes);

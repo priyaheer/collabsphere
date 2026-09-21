@@ -30,7 +30,10 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-const allowedOrigins = new Set([env.CLIENT_URL].filter(Boolean));
+const allowedOrigins = new Set([
+  env.CLIENT_URL,
+  ...(env.isProd ? ["https://collabsphere-pihu7.vercel.app"] : []),
+].filter(Boolean));
 const isLocalDevOrigin = (origin) => {
   if (env.isProd) return false;
   try {

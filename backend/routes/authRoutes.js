@@ -17,6 +17,7 @@ import {
   verifyResetOtpValidator,
 } from "../validators/authValidators.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { completeGitHubOAuth } from "../controllers/githubController.js";
 
 const router = express.Router();
 
@@ -52,6 +53,7 @@ router.post("/login", loginLimiter, loginValidator, login);
 router.post("/forgot-password", passwordResetLimiter, forgotPasswordValidator, forgotPassword);
 router.post("/verify-reset-otp", passwordResetLimiter, verifyResetOtpValidator, verifyResetOtp);
 router.post("/reset-password", passwordResetLimiter, resetPasswordValidator, resetPassword);
+router.get("/github/callback", completeGitHubOAuth);
 router.get("/me", protect, getMe);
 router.post("/logout", protect, logout);
 

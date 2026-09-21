@@ -19,7 +19,12 @@ export const env = {
   GROQ_MODEL: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
   GITHUB_CLIENT_ID: (process.env.GITHUB_CLIENT_ID || "").trim(),
   GITHUB_CLIENT_SECRET: (process.env.GITHUB_CLIENT_SECRET || "").trim(),
-  GITHUB_CALLBACK_URL: (process.env.GITHUB_CALLBACK_URL || "http://localhost:5000/api/github/oauth/callback").trim(),
+  GITHUB_CALLBACK_URL: (
+    process.env.GITHUB_CALLBACK_URL ||
+    (process.env.NODE_ENV === "production"
+      ? "https://collabsphere-qzvu.onrender.com/api/auth/github/callback"
+      : `http://localhost:${Number(process.env.PORT) || 5000}/api/github/oauth/callback`)
+  ).trim(),
   GITHUB_TOKEN_ENCRYPTION_KEY: (process.env.GITHUB_TOKEN_ENCRYPTION_KEY || "").trim(),
   CLIENT_URL: (process.env.CLIENT_URL || "http://localhost:5173").trim(),
   EMAIL_FROM: (process.env.EMAIL_FROM || "").trim(),
